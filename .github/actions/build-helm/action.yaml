@@ -32,7 +32,7 @@ runs:
         echo "${{ inputs.passphrase }}" > ~/.gnupg/passphrase
 
         helm package \
-          "./dynatrace-operator/config/helm/chart/default/" \
+          "./config/helm/chart/default/" \
           -d ${{ inputs.output-dir }} \
           --app-version "${{ inputs.version }}" \
           --version "${{ inputs.version }}"
@@ -43,4 +43,3 @@ runs:
 
         rm ~/.gnupg/secring.gpg
         rm ~/.gnupg/passphrase
-
