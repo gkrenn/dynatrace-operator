@@ -27,6 +27,7 @@ runs:
     - name: Generate helm-package
       shell: bash
       run: |
+        mkdir -p ~/.gnupg
         echo "${{ inputs.secring }}" | base64 -d > ~/.gnupg/secring.gpg
         echo "${{ inputs.passphrase }}" > ~/.gnupg/passphrase
 
