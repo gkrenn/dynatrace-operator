@@ -5,7 +5,6 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+
       - v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+ # include prerelease tags too
 
-
 jobs:
   prepare:
     permissions:
@@ -37,7 +36,6 @@ jobs:
     if: ${{ contains(github.ref, '-rc.') }}
     name: Create pre-release
     needs: [prepare]
-    environment: Release
     permissions:
       contents: write
     runs-on: ubuntu-latest
