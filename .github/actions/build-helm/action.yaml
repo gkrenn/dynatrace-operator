@@ -1,0 +1,51 @@
+name: Build Helm packages
+description: Builds the helm packages
+inputs:
+  version:
+    description: The version of the operator that should be deployed
+    required: true
+  github-token:
+    description: Token used to fetch the current helm version
+    required: true
+  secring:
+    description: Contains the private key that is used to sign the helm packages
+    required: true
+  passphrase:
+    description: Passphrase used to encrypt the private key
+    required: true
+  output-dir:
+    description: Directory where built package should be put
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Helm
+      uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3.5
+      with:
+        token: ${{ inputs.github-token }}
+    - name: Generate helm-package
+      shell: bash
+      with:
+        version: ${{ inputs.version }}
+        secring: ${{ inputs.secring }}
+        passphrase: ${{ inputs.passphrase }}
+        output-dir: ${{ inputs.output-dir }}
+      run: |
+        echo "${ secring }" | base64 -d > ~/.gnupg/secring.gpg
+        echo "${ passphrase }" > ~/.gnupg/passphrase
+
+        helm package \
+          "./dynatrace-operator/config/helm/chart/default/" \
+#          -d "./dynatrace-operator/config/helm/repos/stable/temp" \
+          -d ${ output-dir } \
+          --app-version "${version}" \
+          --version "${version}"
+          --sign \
+          --key "Dynatrace LLC" \
+          --keyring ~/.gnupg/secring.gpg \
+          --passphrase-file ~/.gnupg/passphrase
+
+        rm ~/.gnupg/secring.gpg
+        rm ~/.gnupg/passphrase
+
