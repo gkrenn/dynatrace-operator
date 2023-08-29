@@ -33,7 +33,6 @@ jobs:
       version: ${{ steps.prep.outputs.docker_image_tag }}
 
   pre-release:
-    if: ${{ contains(github.ref, '-rc.') }}
     name: Create pre-release
     needs: [prepare]
     permissions:
