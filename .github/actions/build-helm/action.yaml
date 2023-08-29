@@ -32,7 +32,6 @@ runs:
 
         helm package \
           "./dynatrace-operator/config/helm/chart/default/" \
-#          -d "./dynatrace-operator/config/helm/repos/stable/temp" \
           -d ${{ inputs.output-dir }} \
           --app-version "${{ inputs.version }}" \
           --version "${{ inputs.version }}"
