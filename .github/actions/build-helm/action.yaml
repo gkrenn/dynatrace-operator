@@ -31,7 +31,11 @@ runs:
         echo "${{ inputs.secring }}" | base64 -d > ~/.gnupg/secring.gpg
         echo "${{ inputs.passphrase }}" > ~/.gnupg/passphrase
 
-        # Set up a trap to ensure cleanup even on failure
+        cleanup() {
+          rm -f ~/.gnupg/secring.gpg
+          rm -f ~/.gnupg/passphrase
+        }
+
         trap 'cleanup' ERR
 
         helm package \
@@ -43,8 +47,3 @@ runs:
           --key "Dynatrace LLC" \
           --keyring ~/.gnupg/secring.gpg \
           --passphrase-file ~/.gnupg/passphrase
-
-        cleanup() {
-          rm -f ~/.gnupg/secring.gpg
-          rm -f ~/.gnupg/passphrase
-        }
