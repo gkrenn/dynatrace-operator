@@ -59,11 +59,11 @@ jobs:
         run: |
           mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
           mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
-          echo And the version is ${{ steps.prep.outputs.docker_image_tag }}
+          echo And the version is ${{ needs.prepare.outputs.version }}
       - name: Build helm packages
         uses: ./.github/actions/build-helm
         with:
-          version: "${{ steps.prep.outputs.docker_image_tag }}"
+          version: ${{ needs.prepare.outputs.version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           secring: ${{ secrets.SECRING }}
           passphrase: ${{ secrets.PASSPHRASE }}
