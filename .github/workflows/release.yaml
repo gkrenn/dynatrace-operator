@@ -73,10 +73,8 @@ jobs:
         with:
           body_path: ./CHANGELOG.md
           files: |
-            config/deploy/kubernetes/kubernetes.yaml
-            config/deploy/openshift/openshift.yaml
-            helm-pkg/dynatrace-operator.tgz
-            helm-pkg/dynatrace-operator.tgz.prov
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz.prov
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: true
           draft: true

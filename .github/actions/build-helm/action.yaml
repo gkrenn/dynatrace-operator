@@ -26,32 +26,4 @@ runs:
         token: ${{ inputs.github-token }}
     - name: Generate helm-package
       shell: bash
-      run: |
-        echo "Generating helm package"
-        echo "Version: ${{ inputs.version }}"
-        # mkdir -p ~/.gnupg
-        # echo "${{ inputs.secring }}" | base64 -d > ~/.gnupg/secring.gpg
-        # echo "${{ inputs.passphrase }}" > ~/.gnupg/passphrase
-
-        # cleanup() {
-        #   rm -f ~/.gnupg/secring.gpg
-        #   rm -f ~/.gnupg/passphrase
-        # }
-
-        # trap 'cleanup' ERR
-
-        # helm package \
-        #   "./config/helm/chart/default/" \
-        #   -d ${{ inputs.output-dir }} \
-        #   --app-version "${{ inputs.version }}" \
-        #   --version "${{ inputs.version }}" \
-        #   --sign \
-        #   --key "Dynatrace LLC" \
-        #   --keyring ~/.gnupg/secring.gpg \
-        #   --passphrase-file ~/.gnupg/passphrase
-
-        # echo ${{ env.version }}
-        # echo ${{ inputs.version }}
-
-        # mv ${{ inputs.output-dir }}/dynatrace-operator-${VERSION}.tgz ${{ inputs.output-dir }}/dynatrace-operator.tgz
-        # mv ${{ inputs.output-dir }}/dynatrace-operator-${{ env.VERSION }}.tgz.prov ${{ inputs.output-dir }}/dynatrace-operator.tgz.prov
+      run: hack/build/ci/generate-helm-package.sh "${{ inputs.secring }}" "${{ inputs.passphrase }}" "${{ inputs.output-dir }}" "${{ inputs.version }}"
