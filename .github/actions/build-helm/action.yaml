@@ -50,5 +50,8 @@ runs:
           --keyring ~/.gnupg/secring.gpg \
           --passphrase-file ~/.gnupg/passphrase
 
+        echo ${{ env.version }}
+        echo ${{ inputs.version }}
+
         mv ${{ inputs.output-dir }}/dynatrace-operator-${{ env.VERSION }}.tgz ${{ inputs.output-dir }}/dynatrace-operator.tgz
         mv ${{ inputs.output-dir }}/dynatrace-operator-${{ env.VERSION }}.tgz.prov ${{ inputs.output-dir }}/dynatrace-operator.tgz.prov
