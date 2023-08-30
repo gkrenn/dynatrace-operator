@@ -26,6 +26,8 @@ runs:
         token: ${{ inputs.github-token }}
     - name: Generate helm-package
       shell: bash
+      with:
+        version: ${{ inputs.version }}
       run: |
         mkdir -p ~/.gnupg
         echo "${{ inputs.secring }}" | base64 -d > ~/.gnupg/secring.gpg
@@ -48,5 +50,5 @@ runs:
           --keyring ~/.gnupg/secring.gpg \
           --passphrase-file ~/.gnupg/passphrase
 
-        mv ${{ inputs.output-dir }}/dynatrace-operator-"${{ inputs.version }}".tgz ${{ inputs.output-dir }}/dynatrace-operator.tgz
-        mv ${{ inputs.output-dir }}/dynatrace-operator-"${{ inputs.version }}".tgz.prov ${{ inputs.output-dir }}/dynatrace-operator.tgz.prov
+        mv ${{ inputs.output-dir }}/dynatrace-operator-${ version }.tgz ${{ inputs.output-dir }}/dynatrace-operator.tgz
+        mv ${{ inputs.output-dir }}/dynatrace-operator-${ version }.tgz.prov ${{ inputs.output-dir }}/dynatrace-operator.tgz.prov
