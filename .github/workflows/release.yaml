@@ -59,8 +59,6 @@ jobs:
         run: |
           mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
           mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
-      - name: Generate CRD
-        run: make manifests/crd/release
       - name: Build helm packages
         uses: ./.github/actions/build-helm
         with:
