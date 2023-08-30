@@ -89,8 +89,8 @@ jobs:
           files: |
             config/deploy/kubernetes/kubernetes.yaml
             config/deploy/openshift/openshift.yaml
-            helm-pkg/dynatrace-operator-${{ secrets.sldkfjlkj }}.tgz
-            helm-pkg/dynatrace-operator-${{ secrets.PASSPHRASE }}.tgz.prov
+            helm-pkg/dynatrace-operator.tgz
+            helm-pkg/dynatrace-operator.tgz.prov
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: true
           draft: true

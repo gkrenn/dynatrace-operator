@@ -47,3 +47,6 @@ runs:
           --key "Dynatrace LLC" \
           --keyring ~/.gnupg/secring.gpg \
           --passphrase-file ~/.gnupg/passphrase
+
+        mv ${{ inputs.output-dir }}/dynatrace-operator-${{ inputs.version }}.tgz ${{ inputs.output-dir }}/dynatrace-operator.tgz
+        mv ${{ inputs.output-dir }}/dynatrace-operator-${{ inputs.version }}.tgz.prov ${{ inputs.output-dir }}/dynatrace-operator.tgz.prov
