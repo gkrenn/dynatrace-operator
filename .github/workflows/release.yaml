@@ -38,29 +38,14 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        registry: [ dockerhub ]
-        include:
-          - registry: dockerhub
-            url: docker.io
-            repository: DOCKERHUB_REPOSITORY
     steps:
       - name: Checkout code
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - name: Generate release notes
         id: generate_notes
-        env:
-          PRE_RELEASE: true
         run: |
-          touch config/deploy/kubernetes/kubernetes-all.yaml
-          touch config/deploy/openshift/openshift-all.yaml
-          touch CHANGELOG.md
-      - name: Rename manifests
-        run: |
-          mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
-          mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
-          echo And the version is ${{ needs.prepare.outputs.version }}
+          echo ${{ contains(github.ref, '-rc.') }}
+          hack/build/ci/generate-release-notes.sh
       - name: Build helm packages
         uses: ./.github/actions/build-helm
         with:
