@@ -18,10 +18,10 @@ entries:
       name: luhi-DT
     name: dynatrace-operator
     sources:
-    - https://github.com/Dynatrace/dynatrace-operator
+    - https://github.com/gkrenn/dynatrace-operator
     type: application
     urls:
-    - https://github.com/Dynatrace/dynatrace-operator/releases/download/v0.13.0/dynatrace-operator-0.13.0.tgz
+    - https://github.com/gkrenn/dynatrace-operator/releases/download/v0.13.0/dynatrace-operator.tgz
     version: 0.13.0
   - apiVersion: v2
     appVersion: 0.12.1
