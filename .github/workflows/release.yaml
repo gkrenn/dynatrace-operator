@@ -55,6 +55,7 @@ jobs:
         run: |
           touch config/deploy/kubernetes/kubernetes-all.yaml
           touch config/deploy/openshift/openshift-all.yaml
+          touch CHANGELOG.md
       - name: Rename manifests
         run: |
           mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
