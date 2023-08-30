@@ -89,7 +89,8 @@ jobs:
           files: |
             config/deploy/kubernetes/kubernetes.yaml
             config/deploy/openshift/openshift.yaml
-            ./helm-pkg/
+            helm-pkg/dynatrace-operator-${{ steps.prep.outputs.docker_image_tag }}.tgz
+            helm-pkg/dynatrace-operator-${{ steps.prep.outputs.docker_image_tag }}.tgz.prov
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: true
           draft: true
