@@ -22,11 +22,13 @@ cleanup() {
 
 trap 'cleanup' ERR
 
+version_without_v="${version#v}"
+
 helm package \
     "./config/helm/chart/default/" \
     -d "${output_dir}" \
-    --app-version "${version}" \
-    --version "${version}" \
+    --app-version "${version_without_v}" \
+    --version "${version_without_v}" \
     --sign \
     --key "Dynatrace LLC" \
     --keyring ~/.gnupg/secring.gpg \
