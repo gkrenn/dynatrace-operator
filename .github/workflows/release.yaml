@@ -42,13 +42,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - name: Generate release notes
-        id: generate_notes
-        with: 
+        shell: bash
+        env: 
           PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
         run: |
           hack/build/ci/generate-release-notes.sh
       - name: Create manifests 
-        with: 
+        env: 
           version: ${{ needs.prepare.outputs.version }}
           platforms: | 
             kubernetes
