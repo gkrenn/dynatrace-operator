@@ -21,4 +21,4 @@ runs:
         IMAGE: ${{ inputs.registry }}/${{ inputs.repository }}
       shell: bash
       run: |
-        hack/build/ci/create-manifest.sh "${IMAGE}" "${{ inputs.version }}" ${{ inputs.combined }}
+        hack/build/ci/create-docker-manifest.sh "${IMAGE}" "${{ inputs.version }}" ${{ inputs.combined }}

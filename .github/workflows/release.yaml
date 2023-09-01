@@ -43,9 +43,26 @@ jobs:
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - name: Generate release notes
         id: generate_notes
+        with: 
+          PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
         run: |
-          echo ${{ contains(github.ref, '-rc.') }}
           hack/build/ci/generate-release-notes.sh
+      - name: Create manifests 
+        with: 
+          version: ${{ needs.prepare.outputs.version }}
+          platforms: | 
+            kubernetes
+            openshift
+          images: |
+            docker.io/dynatrace/dynatrace-operator
+            registry.connect.redhat.com/dynatrace/dynatrace-operator
+        run: |
+          hack/build/ci/create-release-manifests.sh "${ platforms }" "${ images }" "${ version }"
+      - name: Rename manifests
+        if: ${{ contains(github.ref, '-rc.') }}
+        run: |
+          mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
+          mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
       - name: Build helm packages
         uses: ./.github/actions/build-helm
         with:
@@ -54,14 +71,34 @@ jobs:
           secring: ${{ secrets.SECRING }}
           passphrase: ${{ secrets.PASSPHRASE }}
           output-dir: "./helm-pkg"
-      - name: Pre-release
+      - name: Pre-release simple
         uses: softprops/action-gh-release@v1
+        if: ${{ contains(github.ref, '-rc.') }}
         with:
           body_path: ./CHANGELOG.md
           files: |
+            config/deploy/kubernetes/kubernetes.yaml
+            config/deploy/openshift/openshift.yaml
             helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz
             helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz.prov
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: true
+          draft: true
+          fail_on_unmatched_files: true
+      - name: Pre-release all files
+        uses: softprops/action-gh-release@v1
+        if: ${{ !contains(github.ref, '-rc.') }}
+        with:
+          body_path: ./CHANGELOG.md
+          files: |
+            config/deploy/kubernetes/kubernetes.yaml
+            config/deploy/kubernetes/kubernetes-csi.yaml
+            config/deploy/kubernetes/gke-autopilot.yaml
+            config/deploy/openshift/openshift.yaml
+            config/deploy/openshift/openshift-csi.yaml
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz.prov
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: false
           draft: true
           fail_on_unmatched_files: true
