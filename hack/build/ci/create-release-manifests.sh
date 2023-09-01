@@ -17,10 +17,10 @@ if [ "${#platforms[@]}" -ne "${#images[@]}" ]; then
     exit 1
 fi
 
-version_without_v="${version#v}"
+version_without_prefix="${version#v}"
 
 make manifests/crd/release \
-    CHART_VERSION="${version_without_v}" \
+    CHART_VERSION="${version_without_prefix}" \
 
 for ((i=0; i<${#platforms[@]}; i++)); do
     make manifests/"${platforms[$i]}" \

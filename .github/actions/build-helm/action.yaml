@@ -1,7 +1,7 @@
 name: Build Helm packages
 description: Builds the helm packages
 inputs:
-  version:
+  version_without_prefix:
     description: The version of the operator that should be deployed
     required: true
   github-token:
@@ -26,4 +26,4 @@ runs:
         token: ${{ inputs.github-token }}
     - name: Generate helm-package
       shell: bash
-      run: hack/build/ci/generate-helm-package.sh "${{ inputs.secring }}" "${{ inputs.passphrase }}" "${{ inputs.output-dir }}" "${{ inputs.version }}"
+      run: hack/build/ci/generate-helm-package.sh "${{ inputs.secring }}" "${{ inputs.passphrase }}" "${{ inputs.output-dir }}" "${{ inputs.version_without_prefix }}"

@@ -27,6 +27,7 @@ printBuildRelatedVariables() {
   echo "go_build_tags=${go_build_tags}"
   echo "docker_image_labels=${docker_image_labels}"
   echo "docker_image_tag=${docker_image_tag}"
+  echo "docker_image_tag_without_prefix=${docker_image_tag#v}"
 }
 
 # prepare variables

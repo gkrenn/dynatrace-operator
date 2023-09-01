@@ -31,6 +31,7 @@ jobs:
     outputs:
       labels: ${{ steps.meta.outputs.labels }}
       version: ${{ steps.prep.outputs.docker_image_tag }}
+      version_without_prefix: ${{ steps.prep.outputs.docker_image_tag_without_prefix }}
 
   pre-release:
     name: Create pre-release
@@ -74,7 +75,7 @@ jobs:
       - name: Build helm packages
         uses: ./.github/actions/build-helm
         with:
-          version: ${{ needs.prepare.outputs.version }}
+          version_without_prefix: ${{ needs.prepare.outputs.version_without_prefix }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           secring: ${{ secrets.SECRING }}
           passphrase: ${{ secrets.PASSPHRASE }}
@@ -87,8 +88,8 @@ jobs:
           files: |
             config/deploy/kubernetes/kubernetes.yaml
             config/deploy/openshift/openshift.yaml
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz.prov
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz.prov
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: true
           draft: true
@@ -104,8 +105,8 @@ jobs:
             config/deploy/kubernetes/gke-autopilot.yaml
             config/deploy/openshift/openshift.yaml
             config/deploy/openshift/openshift-csi.yaml
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version }}.tgz.prov
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz.prov
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: false
           draft: true
