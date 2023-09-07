@@ -56,17 +56,6 @@ jobs:
           PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
         run: |
           hack/build/ci/generate-release-notes.sh
-      # - name: Generate manifests 
-      #   env: 
-      #     version: ${{ needs.prepare.outputs.version }}
-      #     platforms: | 
-      #       kubernetes
-      #       openshift
-      #     images: |
-      #       docker.io/dynatrace/dynatrace-operator
-      #       registry.connect.redhat.com/dynatrace/dynatrace-operator
-      #   run: |
-      #     hack/build/ci/create-release-manifests.sh "$platforms" "$images" "$version"
       - name: Generate manifests
         shell: bash
         env: 
@@ -75,7 +64,6 @@ jobs:
         run: |
           make manifests/crd/release CHART_VERSION="${VERSION_WITHOUT_PREFIX}"
 
-          # TODO take from secret "DOCKERHUB_REPOSITORY"
           make manifests/kubernetes IMAGE="docker.io/dynatrace/dynatrace-operator" TAG="${VERSION}"
           make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${VERSION}"
       - name: Rename manifests
@@ -84,6 +72,7 @@ jobs:
           mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
           mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
       - name: Build helm packages
+        if: ${{ contains(github.ref, '-rc.') }}
         uses: ./.github/actions/build-helm
         with:
           version_without_prefix: ${{ needs.prepare.outputs.version_without_prefix }}
@@ -99,8 +88,6 @@ jobs:
           files: |
             config/deploy/kubernetes/kubernetes.yaml
             config/deploy/openshift/openshift.yaml
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz.prov
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: true
           draft: true
