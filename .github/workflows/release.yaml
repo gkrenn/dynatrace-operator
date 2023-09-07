@@ -56,17 +56,27 @@ jobs:
           PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
         run: |
           hack/build/ci/generate-release-notes.sh
-      - name: Create manifests 
+      # - name: Generate manifests 
+      #   env: 
+      #     version: ${{ needs.prepare.outputs.version }}
+      #     platforms: | 
+      #       kubernetes
+      #       openshift
+      #     images: |
+      #       docker.io/dynatrace/dynatrace-operator
+      #       registry.connect.redhat.com/dynatrace/dynatrace-operator
+      #   run: |
+      #     hack/build/ci/create-release-manifests.sh "$platforms" "$images" "$version"
+      - name: Generate manifests
+        shell: bash
         env: 
-          version: ${{ needs.prepare.outputs.version }}
-          platforms: | 
-            kubernetes
-            openshift
-          images: |
-            docker.io/dynatrace/dynatrace-operator
-            registry.connect.redhat.com/dynatrace/dynatrace-operator
+          TAG: ${{ needs.prepare.outputs.version_without_prefix }}
         run: |
-          hack/build/ci/create-release-manifests.sh "$platforms" "$images" "$version"
+          make manifests/crd/release CHART_VERSION="$TAG"
+
+          # TODO take from secret "DOCKERHUB_REPOSITORY"
+          make manifests/kubernetes IMAGE="docker.io/dynatrace/dynatrace-operator"
+          make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator"
       - name: Rename manifests
         if: ${{ contains(github.ref, '-rc.') }}
         run: |
@@ -80,7 +90,7 @@ jobs:
           secring: ${{ secrets.SECRING }}
           passphrase: ${{ secrets.PASSPHRASE }}
           output-dir: "./helm-pkg"
-      - name: Pre-release simple
+      - name: Pre-release single yamls
         uses: softprops/action-gh-release@v1
         if: ${{ contains(github.ref, '-rc.') }}
         with:
@@ -94,7 +104,7 @@ jobs:
           prerelease: true
           draft: true
           fail_on_unmatched_files: true
-      - name: Pre-release all files
+      - name: Pre-release all yamls
         uses: softprops/action-gh-release@v1
         if: ${{ !contains(github.ref, '-rc.') }}
         with:
