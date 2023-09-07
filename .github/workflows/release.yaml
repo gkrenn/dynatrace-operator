@@ -71,7 +71,7 @@ jobs:
         shell: bash
         env: 
           VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
-          VERSION: ${{ needs.prepare.outputs.version_without_prefix }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           make manifests/crd/release CHART_VERSION="${VERSION_WITHOUT_PREFIX}"
 
