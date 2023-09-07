@@ -70,13 +70,14 @@ jobs:
       - name: Generate manifests
         shell: bash
         env: 
-          TAG: ${{ needs.prepare.outputs.version_without_prefix }}
+          VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
+          VERSION: ${{ needs.prepare.outputs.version_without_prefix }}
         run: |
-          make manifests/crd/release CHART_VERSION="$TAG"
+          make manifests/crd/release CHART_VERSION="${VERSION_WITHOUT_PREFIX}"
 
           # TODO take from secret "DOCKERHUB_REPOSITORY"
-          make manifests/kubernetes IMAGE="docker.io/dynatrace/dynatrace-operator"
-          make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator"
+          make manifests/kubernetes IMAGE="docker.io/dynatrace/dynatrace-operator" TAG="${VERSION}"
+          make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${VERSION}"
       - name: Rename manifests
         if: ${{ contains(github.ref, '-rc.') }}
         run: |
