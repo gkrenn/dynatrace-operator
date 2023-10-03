@@ -77,7 +77,7 @@ jobs:
         if: ${{ !contains(github.ref, '-rc.') }}
         uses: ./.github/actions/sign-image
         with:
-          image: "oci://registry.hub.docker.com/gabrielkrenn390/dynatrace-operator:${{ needs.prepare.outputs.version }}@${{ steps.pushHelmChart.outputs.digest }}"
+          image: "docker.io/gabrielkrenn390/dynatrace-operator:${{ needs.prepare.outputs.version }}@${{ steps.pushHelmChart.outputs.digest }}"
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
       - name: Prepare cosign.pub artifact
