@@ -36,7 +36,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [prepare, build, attach-sbom]
+    needs: [prepare]
     environment: Release
     permissions:
       contents: write
