@@ -11,7 +11,7 @@ if [ $exit_status -eq 0 ]; then
   # Command succeeded, extract the digest
   digest=$(echo "$output" | awk '/Digest:/ {print $2}')
   # write to digest to github actions output 
-  echo "digest=$digest" >> $GITHUB_STATE
+  echo "digest=$digest" >> $GITHUB_OUTPUT
 else
   # Command failed, print the error message and exit with the error code
   echo "Command failed with exit status $exit_status. Error: $output"
