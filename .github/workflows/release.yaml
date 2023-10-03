@@ -62,23 +62,23 @@ jobs:
           secring: ${{ secrets.SECRING }}
           passphrase: ${{ secrets.PASSPHRASE }}
           output-dir: "./helm-pkg"
+      - name: Upload helm package to OCI registry
+        id: pushHelmChart
+        if: ${{ !contains(github.ref, '-rc.') }}
+        shell: bash
+        run: |
+          helm registry login -u "${{ secrets.OCI_USERNAME }}" -p "${{ secrets.OCI_PASSWORD }}" registry.hub.docker.com
+          # call push-helm-chart.sh
+          hack/build/ci/push-helm-chart.sh \
+            "./helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz" \
+            "oci://registry.hub.docker.com/gabrielkrenn390"
+          # previous command calls   echo "::set-output name=digest::$digest"
       - name: Login to Registry
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
           registry: docker.io
           username: ${{ secrets.OCI_USERNAME }}
           password: ${{ secrets.OCI_PASSWORD }}
-      - name: Upload helm package to OCI registry
-        id: pushHelmChart
-        if: ${{ !contains(github.ref, '-rc.') }}
-        shell: bash
-        run: |
-          # helm registry login -u "${{ secrets.OCI_USERNAME }}" -p "${{ secrets.OCI_PASSWORD }}" registry.hub.docker.com
-          # call push-helm-chart.sh
-          hack/build/ci/push-helm-chart.sh \
-            "./helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz" \
-            "oci://registry.hub.docker.com/gabrielkrenn390"
-          # previous command calls   echo "::set-output name=digest::$digest"
       - name: Sign package with cosign
         if: ${{ !contains(github.ref, '-rc.') }}
         uses: ./.github/actions/sign-image
