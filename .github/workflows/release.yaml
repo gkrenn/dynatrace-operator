@@ -53,35 +53,14 @@ jobs:
         id: depdownload
         run: |
           hack/build/ci/install-cgo-dependencies.sh
-      - name: Generate release notes
-        shell: bash
-        env:
-          PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
-        run: |
-          hack/build/ci/generate-release-notes.sh
-      - name: Generate K8s manifests
-        shell: bash
-        env:
-          VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          make manifests/crd/release CHART_VERSION="${VERSION_WITHOUT_PREFIX}"
-
-          make manifests/kubernetes IMAGE="docker.io/dynatrace/dynatrace-operator" TAG="${VERSION}"
-          make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${VERSION}"
-      - name: Rename manifests if pre-release
-        if: ${{ contains(github.ref, '-rc.') }}
-        run: |
-          mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
-          mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
       - name: Build helm packages
         if: ${{ !contains(github.ref, '-rc.') }}
         uses: ./.github/actions/build-helm
         with:
           version_without_prefix: ${{ needs.prepare.outputs.version_without_prefix }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          secring: ${{ secrets.HELM_SECRING }}
-          passphrase: ${{ secrets.HELM_PASSPHRASE }}
+          secring: ${{ secrets.SECRING }}
+          passphrase: ${{ secrets.PASSPHRASE }}
           output-dir: "./helm-pkg"
       - name: Upload helm package to OCI registry
         id: pushHelmChart
