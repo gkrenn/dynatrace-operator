@@ -41,7 +41,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      id-token: write
+      id-token: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
