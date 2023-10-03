@@ -70,7 +70,7 @@ jobs:
         run: |
           helm registry login -u "${{ secrets.OCI_USERNAME }}" -p "${{ secrets.OCI_PASSWORD }}" registry.hub.docker.com
           # call push-helm-chart.sh
-          hack/build/ci/push-helm-chart.sh \
+          source hack/build/ci/push-helm-chart.sh \
             "./helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz" \
             "oci://registry.hub.docker.com/gabrielkrenn390" >> $GITHUB_STATE
       - name: Login to Registry
