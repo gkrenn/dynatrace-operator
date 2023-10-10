@@ -86,8 +86,8 @@ jobs:
       - name: Upload and sign helm package to dockerhub
         uses: ./.github/actions/upload-helm
         with:
-          registry-username: ${{ secrets.DOCKERHUB_USERNAME }}
-          registry-password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          registry-username: ${{ secrets.OCI_USERNAME }} # rename to dockerhub
+          registry-password: ${{ secrets.OCI_PASSWORD }}
           version: ${{ needs.prepare.outputs.version }}
           version-without-prefix: ${{ needs.prepare.outputs.version_without_prefix }}
           cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
