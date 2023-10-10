@@ -90,6 +90,8 @@ jobs:
           registry-password: ${{ secrets.DOCKERHUB_PASSWORD }}
           version: ${{ needs.prepare.outputs.version }}
           version-without-prefix: ${{ needs.prepare.outputs.version_without_prefix }}
+          signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          signing-password: ${{ secrets.COSIGN_PASSWORD }}
       - name: Create pre-release
         uses: softprops/action-gh-release@v1
         if: ${{ contains(github.ref, '-rc.') }}

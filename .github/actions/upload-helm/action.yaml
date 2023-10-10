@@ -10,20 +10,30 @@ inputs:
   registry-url:
     description: URL for the OCI registry
     required: true
-    default: "registry.hub.docker.com"
-  registry-repository:
+    default: registry.hub.docker.com
+  registry-namespace:
     description: Repository in the OCI registry
     required: true
-    default: "dynatrace"
-  helm-package-url:
-    description: URL for the helm package
+    default: dynatrace
+  image-base-url: 
+    description: Base URL for the image
     required: true
-    default: docker.io/gabrielkrenn390/dynatrace-operator
+    default: docker.io
+  helm-repository-name:
+    description: Repository used in the OCI registry, be aware that helm upload does infer this from the helm package name itself
+    required: true
+    default: dynatrace-operator
   version:
     description: The version of the helm package to upload
     required: true
   version-without-prefix:
     description: The version of the helm package to upload without the leading 'v' character
+    required: true
+  cosign-private-key: 
+    description: Private key used to sign the helm package
+    required: true
+  cosign-password:
+    description: Password used to encrypt the private key
     required: true
 
 runs:
@@ -36,16 +46,16 @@ runs:
       helm registry login -u "${{ inputs.registry-username }}" -p "${{ inputs.registry-password }}" "${{ inputs.registry-url }}"
       hack/build/ci/push-helm-chart.sh \
         "./helm-pkg/dynatrace-operator-${{ inputs.version-without-prefix }}.tgz" \
-        "oci://${{ inputs.registry-url }}/${{ inputs.registry-repository }}"
+        "oci://${{ inputs.registry-url }}/${{ inputs.registry-namespace }}"
   - name: Login to Registry
     uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
     with:
       registry: docker.io
-      username: ${{ secrets.DOCKERHUB_USERNAME }}
-      password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      username: ${{ inputs.registry-username }}
+      password: ${{ inputs.registry-password }}
   - name: Sign OCI package with cosign
     uses: ./.github/actions/sign-image
     with:
-      image: "{{ inputs.helm-package-url }}:${{ inputs.version }}@${{ steps.push-helm-to-OCI.outputs.digest }}"
-      signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-      signing-password: ${{ secrets.COSIGN_PASSWORD }}
+      image: "{{image-base-url}}/{{ inputs.registry-namespace }}/{{ inputs.helm-repository-name }}:${{ inputs.version }}@${{ steps.push-helm-to-OCI.outputs.digest }}"
+      signing-key: ${{ inputs.cosign-private-key }}
+      signing-password: ${{ inputs.cosign-password }}
