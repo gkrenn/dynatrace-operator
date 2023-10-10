@@ -14,7 +14,7 @@ inputs:
   registry-namespace:
     description: Repository in the OCI registry
     required: true
-    default: dynatrace
+    default: gabrielkrenn390
   image-base-url: 
     description: Base URL for the image
     required: true
@@ -56,6 +56,6 @@ runs:
   - name: Sign OCI package with cosign
     uses: ./.github/actions/sign-image
     with:
-      image: "{{image-base-url}}/{{ inputs.registry-namespace }}/{{ inputs.helm-repository-name }}:${{ inputs.version }}@${{ steps.push-helm-to-OCI.outputs.digest }}"
+      image: "{{ inputs.image-base-url }}/{{ inputs.registry-namespace }}/{{ inputs.helm-repository-name }}:${{ inputs.version }}@${{ steps.push-helm-to-OCI.outputs.digest }}"
       signing-key: ${{ inputs.cosign-private-key }}
       signing-password: ${{ inputs.cosign-password }}
