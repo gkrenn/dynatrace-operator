@@ -80,8 +80,8 @@ jobs:
         with:
           version_without_prefix: ${{ needs.prepare.outputs.version_without_prefix }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          secring: ${{ secrets.HELM_SECRING }}
-          passphrase: ${{ secrets.HELM_PASSPHRASE }}
+          secring: ${{ secrets.SECRING }}
+          passphrase: ${{ secrets.PASSPHRASE }}
           output-dir: "./helm-pkg"
       - name: Upload and sign helm package to dockerhub
         uses: ./.github/actions/upload-helm
