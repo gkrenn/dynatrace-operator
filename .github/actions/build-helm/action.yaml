@@ -2,7 +2,7 @@ name: Build Helm packages
 description: Builds the helm packages
 inputs:
   version_without_prefix:
-    description: The version of the operator that should be deployed without the leading v
+    description: The version of the operator that should be deployed without the leading 'v' character
     required: true
   github-token:
     description: Token used to fetch the current helm version
