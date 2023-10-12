@@ -14,7 +14,7 @@ inputs:
   registry-namespace:
     description: Repository in the OCI registry
     required: true
-    default: dynatrace
+    default: gabrielkrenn390
   image-base-url:
     description: Base URL for the image
     required: true
