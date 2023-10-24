@@ -1,0 +1,16 @@
+name: 'Dynatrace Workflow Ingester'
+description: 'Ingests a workflow run into Grail'
+author: 'Semanticlabs GmbH'
+inputs:
+  dt-client-id:
+    required: true
+    description: 'Dynatrace Client ID'
+  dt-client-secret:
+    required: true
+    description: 'Dynatrace Client Secret'
+  dt-environment-id:
+    required: true
+    description: 'Dynatrace Environment ID'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
