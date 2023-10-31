@@ -14,4 +14,4 @@ jobs:
         with:
           dt-client-id: ${{ secrets.DT_CLIENT_ID }} # Client ID of Dynatrace OAuth Client
           dt-client-secret: ${{ secrets.DT_CLIENT_SECRET }} # Client secret of Dynatrace OAuth Client 
-          dt-environment-id: ${{ vars.DT_ENVIRONMENT_ID }} # Dynatrace Environment ID asj34817
+          dt-environment-id: ${{ secrets.DT_ENVIRONMENT_ID }} # Dynatrace Environment ID
