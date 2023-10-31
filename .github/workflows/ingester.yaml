@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: .github/actions/github-actions-ingester-main
+      - uses: ./.github/actions/github-actions-ingester-main
         with:
           dt-client-id: ${{ secrets.DT_CLIENT_ID }} # Client ID of Dynatrace OAuth Client
           dt-client-secret: ${{ secrets.DT_CLIENT_SECRET }} # Client secret of Dynatrace OAuth Client 
