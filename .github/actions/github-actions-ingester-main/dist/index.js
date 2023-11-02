@@ -41,7 +41,7 @@ const httpm = __importStar(__nccwpck_require__(6255));
 const http = new httpm.HttpClient('client');
 function getAccessToken(clientId, clientSecret) {
     return __awaiter(this, void 0, void 0, function* () {
-        const response = yield http.post('https://sso-dev.dynatracelabs.com/sso/oauth2/token', `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}&scope=storage:bizevents:write`, {
+        const response = yield http.post('https://sso-dev.dynatracelabs.com/sso/oauth2/token', `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}&scope=storage:events:write`, {
             'content-type': 'application/x-www-form-urlencoded'
         });
         const body = JSON.parse(yield response.readBody());
@@ -67,6 +67,7 @@ function run() {
             const environmentId = core.getInput('dt-environment-id');
             const cloudEvent = buildCloudEvent(github.context.payload);
             const dynatraceAccessToken = yield getAccessToken(clientId, clientSecret);
+            console.log(JSON.stringify(cloudEvent));
             const response = yield http.post(`https://${environmentId}.dev.apps.dynatracelabs.com/api/v2/bizevents/ingest`, JSON.stringify(cloudEvent), {
                 'content-type': 'application/cloudevent+json',
                 authorization: `Bearer ${dynatraceAccessToken}`
