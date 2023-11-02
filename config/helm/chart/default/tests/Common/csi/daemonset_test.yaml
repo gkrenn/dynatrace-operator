@@ -10,7 +10,7 @@ tests:
       platform: kubernetes
     asserts:
       - hasDocuments:
-          count: 2
+          count: 0
 
   - it: should have tolerations by default
     set:
