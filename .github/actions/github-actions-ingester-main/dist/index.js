@@ -68,7 +68,7 @@ function run() {
             const cloudEvent = buildCloudEvent(github.context.payload);
             const dynatraceAccessToken = yield getAccessToken(clientId, clientSecret);
             console.log(JSON.stringify(cloudEvent));
-            const response = yield http.post(`https://${environmentId}.dev.apps.dynatracelabs.com/api/v2/bizevents/ingest`, JSON.stringify(cloudEvent), {
+            const response = yield http.post(`https://${environmentId}.dev.dynatracelabs.com/api/v2/bizevents/ingest`, JSON.stringify(cloudEvent), {
                 'content-type': 'application/cloudevent+json',
                 authorization: `Bearer ${dynatraceAccessToken}`
             });
