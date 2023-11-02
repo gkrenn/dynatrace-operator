@@ -41,7 +41,7 @@ const httpm = __importStar(__nccwpck_require__(6255));
 const http = new httpm.HttpClient('client');
 function getAccessToken(clientId, clientSecret) {
     return __awaiter(this, void 0, void 0, function* () {
-        const response = yield http.post('https://sso-dev.dynatracelabs.com/sso/oauth2/token', `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}&scope=storage:events:write`, {
+        const response = yield http.post('https://sso-dev.dynatracelabs.com/sso/oauth2/token', `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}&scope=storage:bizevents:write`, {
             'content-type': 'application/x-www-form-urlencoded'
         });
         const body = JSON.parse(yield response.readBody());
