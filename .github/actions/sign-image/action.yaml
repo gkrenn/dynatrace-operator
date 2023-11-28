@@ -23,8 +23,8 @@ runs:
         IMAGE: ${{ inputs.image }}
         COSIGN_PRIVATE_KEY: ${{ inputs.signing-key }}
         COSIGN_PASSWORD: ${{ inputs.signing-password }}
-    - name: Sign the images with GitHub OIDC Token
-      shell: bash
-      run: cosign sign -y ${IMAGE}
-      env:
-        IMAGE: ${{ inputs.image }}
+    # - name: Sign the images with GitHub OIDC Token
+    #   shell: bash
+    #   run: cosign sign -y ${IMAGE}
+    #   env:
+    #     IMAGE: ${{ inputs.image }}
