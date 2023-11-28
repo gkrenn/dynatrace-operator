@@ -8,14 +8,11 @@ on:
 
 jobs:
   prepare:
-    permissions:
-      contents: read
-      id-token: write
     name: Prepare properties
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Prepare build parameters
         id: prep
         run: |
@@ -34,100 +31,147 @@ jobs:
       version: ${{ steps.prep.outputs.docker_image_tag }}
       version_without_prefix: ${{ steps.prep.outputs.docker_image_tag_without_prefix }}
 
-  release:
-    name: Create release
-    needs: [prepare]
-    environment: Release
-    permissions:
-      contents: write
-      pull-requests: write
-      id-token: write
+  build:
+    name: Build images
     runs-on: ubuntu-latest
+    needs: [prepare]
+    strategy:
+      matrix:
+        platform: [amd64, arm64, ppc64le]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
-      - name: Setup Golang
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Build image
+        uses: ./.github/actions/build-image
         with:
-          go-version-file: "${{ github.workspace }}/go.mod"
-      - name: Download dependencies
-        id: depdownload
-        run: |
-          hack/build/ci/install-cgo-dependencies.sh
-      - name: Generate release notes
-        shell: bash
-        env:
-          PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
-        run: |
-          hack/build/ci/generate-release-notes.sh
-      - name: Generate K8s manifests
-        shell: bash
-        env:
-          VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          make manifests/crd/release CHART_VERSION="${VERSION_WITHOUT_PREFIX}"
+          platform: ${{ matrix.platform }}
+          labels: ${{ needs.prepare.outputs.labels }}
+          image-tag: ${{ needs.prepare.outputs.version }}
 
-          make manifests/kubernetes IMAGE="docker.io/dynatrace/dynatrace-operator" TAG="${VERSION}"
-          make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${VERSION}"
-      - name: Rename manifests if pre-release
-        if: ${{ contains(github.ref, '-rc.') }}
-        run: |
-          mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
-          mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
-      - name: Build helm packages
-        uses: ./.github/actions/build-helm
+  push:
+    name: Push images
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [amd64, arm64, ppc64le]
+        registry: [dockerhub]
+        include:
+        - registry: dockerhub
+          url: docker.io
+          repository: DOCKERHUB_REPOSITORY
+          username: DOCKERHUB_USERNAME
+          password: DOCKERHUB_PASSWORD
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Login to Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
-          version_without_prefix: ${{ needs.prepare.outputs.version_without_prefix }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          secring: ${{ secrets.SECRING }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-          output-dir: "./helm-pkg"
-      - name: Upload and sign helm package to dockerhub
-        uses: ./.github/actions/upload-helm
+          registry: ${{ matrix.url }}
+          username: ${{ secrets[matrix.username] }}
+          password: ${{ secrets[matrix.password] }}
+      - name: Push ${{matrix.platform}} to ${{matrix.registry}}
+        uses: ./.github/actions/upload-image
         with:
-          registry-username: ${{ secrets.OCI_USERNAME }}
-          registry-password: ${{ secrets.OCI_PASSWORD }}
+          platform: ${{ matrix.platform }}
+          labels: ${{ needs.prepare.outputs.labels }}
           version: ${{ needs.prepare.outputs.version }}
-          version-without-prefix: ${{ needs.prepare.outputs.version_without_prefix }}
-          cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          cosign-password: ${{ secrets.COSIGN_PASSWORD }}
-      - name: Prepare cosign.pub artifact
+          registry: ${{ matrix.url }}
+          repository: ${{ secrets[matrix.repository] }}
+      - name: Get image digest
+        id: digest
         env:
-          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}-${{ matrix.platform }}
+          DIGEST_KEY: digest
         run: |
-          mkdir -p tmp
-          echo ${COSIGN_PUBLIC_KEY} > tmp/cosign.pub
-      - name: Create pre-release
-        uses: softprops/action-gh-release@v1
-        if: ${{ contains(github.ref, '-rc.') }}
+          hack/build/ci/get-image-digest.sh
+      - name: Sign image for ${{matrix.registry}}
+        uses: ./.github/actions/sign-image
         with:
-          body_path: ./CHANGELOG.md
-          files: |
-            tmp/cosign.pub
-            config/deploy/dynatrace-operator-crd.yaml
-            config/deploy/kubernetes/kubernetes.yaml
-            config/deploy/openshift/openshift.yaml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: true
-          draft: true
-          fail_on_unmatched_files: true
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        if: ${{ !contains(github.ref, '-rc.') }}
+          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}-${{ matrix.platform }}@${{steps.digest.outputs.digest}}
+          signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          signing-password: ${{ secrets.COSIGN_PASSWORD }}
+
+  manifest:
+    name: Create Docker manifests
+    environment: Release
+    needs: [prepare, push]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        registry: [dockerhub]
+        include:
+          - registry: dockerhub
+            url: docker.io
+            digest_key: dockerhub-digest
+            repository: DOCKERHUB_REPOSITORY
+            username: DOCKERHUB_USERNAME
+            password: DOCKERHUB_PASSWORD
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Create manifests for ${{matrix.registry}}
+        uses: ./.github/actions/create-manifests
         with:
-          body_path: ./CHANGELOG.md
-          files: |
-            tmp/cosign.pub
-            config/deploy/dynatrace-operator-crd.yaml
-            config/deploy/kubernetes/kubernetes.yaml
-            config/deploy/kubernetes/kubernetes-csi.yaml
-            config/deploy/kubernetes/gke-autopilot.yaml
-            config/deploy/openshift/openshift.yaml
-            config/deploy/openshift/openshift-csi.yaml
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz.prov
-          token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: false
-          draft: true
-          fail_on_unmatched_files: true
+          version: ${{ needs.prepare.outputs.version }}
+          registry: ${{ matrix.url }}
+          repository: ${{ secrets[matrix.repository] }}
+          combined: true
+      - name: Store image digest
+        id: digest
+        env:
+          IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
+          DIGEST_KEY: ${{ matrix.digest_key }}
+        run: |
+          hack/build/ci/get-image-digest.sh
+      - name: Sign images for ${{matrix.registry}}
+        uses: ./.github/actions/sign-image
+        with:
+          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.digest.outputs[matrix.digest_key]}}
+          signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          signing-password: ${{ secrets.COSIGN_PASSWORD }}
+
+  attach-sbom:
+    name: Attach sbom
+    environment: Release
+    needs: [ prepare, push, manifest ]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        registry: [gcr, dockerhub]
+        include:
+          - registry: dockerhub
+            url: docker.io
+            digest_key: dockerhub-digest
+            repository: DOCKERHUB_REPOSITORY
+            username: DOCKERHUB_USERNAME
+            password: DOCKERHUB_PASSWORD
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Login to Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ${{ matrix.url }}
+          username: ${{ secrets[matrix.username] }}
+          password: ${{ secrets[matrix.password] }}
+      - name: Create sbom for ${{matrix.registry}}
+        id: sbom
+        uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # 0.14.0
+        with:
+          image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{needs.manifest.outputs[matrix.digest_key]}}
+          format: 'cyclonedx'
+          output: 'result.json'
+          skip-dirs: '/usr/share/dynatrace-operator/third_party_licenses'
+      - name: Upload sbom to ${{matrix.registry}}
+        uses: ./.github/actions/upload-sbom
+        with:
+          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.operator-digest.outputs[matrix.digest_key]}}
+          sbom: 'result.json'
+          signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          signing-password: ${{ secrets.COSIGN_PASSWORD }}
