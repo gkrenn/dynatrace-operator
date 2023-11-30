@@ -8,6 +8,9 @@ on:
 
 jobs:
   prepare:
+    permissions:
+      contents: read
+      id-token: write
     name: Prepare properties
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +55,8 @@ jobs:
     name: Push images
     needs: [prepare, build]
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     strategy:
       matrix:
         platform: [amd64]
@@ -83,7 +88,6 @@ jobs:
         id: digest
         env:
           IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}-${{ matrix.platform }}
-          DIGEST_KEY: digest
           ONLINE: false
         run: |
           hack/build/ci/get-image-digest.sh $ONLINE
@@ -107,12 +111,9 @@ jobs:
         include:
           - registry: dockerhub
             url: docker.io
-            digest_key: dockerhub-digest
             repository: DOCKERHUB_REPOSITORY
             username: DOCKERHUB_USERNAME
             password: DOCKERHUB_PASSWORD
-    outputs:
-      digest: ${{ toJSON(steps.digest.outputs) }}
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -129,24 +130,22 @@ jobs:
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           combined: true
-      - name: Store image digest
+      - name: Get image digest
         id: digest
         env:
           IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
-          DIGEST_KEY: ${{ matrix.digest_key }}
           ONLINE: true
         run: |
           hack/build/ci/get-image-digest.sh $ONLINE
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
-          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.digest.outputs[matrix.digest_key]}}
+          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.digest.outputs.digest}}
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
   attach-sbom:
     name: Attach sbom
-    environment: Release
     needs: [ prepare, push, manifest ]
     runs-on: ubuntu-latest
     permissions:
@@ -157,7 +156,6 @@ jobs:
         include:
           - registry: dockerhub
             url: docker.io
-            digest_key: dockerhub-digest
             repository: DOCKERHUB_REPOSITORY
             username: DOCKERHUB_USERNAME
             password: DOCKERHUB_PASSWORD
@@ -170,18 +168,25 @@ jobs:
           registry: ${{ matrix.url }}
           username: ${{ secrets[matrix.username] }}
           password: ${{ secrets[matrix.password] }}
+      - name: Get operator-image digest
+        id: operator-digest
+        env:
+          IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
+          ONLINE: true
+        run: |
+          hack/build/ci/get-image-digest.sh $ONLINE
       - name: Create sbom for ${{matrix.registry}}
         id: sbom
         uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # 0.14.0
         with:
-          image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.digest)[matrix.digest_key]}}
+          image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.operator-digest.outputs.digest}}
           format: 'cyclonedx'
           output: 'result.json'
           skip-dirs: '/usr/share/dynatrace-operator/third_party_licenses'
       - name: Upload sbom to ${{matrix.registry}}
         uses: ./.github/actions/upload-sbom
         with:
-          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.digest)[matrix.digest_key]}}
+          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.operator-digest.outputs.digest}}
           sbom: 'result.json'
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
