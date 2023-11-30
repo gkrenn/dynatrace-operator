@@ -8,5 +8,12 @@ then
   exit 1
 fi
 
-digest=$(skopeo inspect docker-daemon:"${IMAGE}" --format "{{.Digest}}")
+if [ "$online" == "true" ];
+then
+  readonly PROVIDER="docker://"
+else
+  readonly PROVIDER="docker-daemon:"
+fi
+
+digest=$(skopeo inspect ${PROVIDER}"${IMAGE}" --format "{{.Digest}}")
 echo "${DIGEST_KEY}=${digest}">> "$GITHUB_OUTPUT"

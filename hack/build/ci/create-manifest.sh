@@ -14,9 +14,7 @@ if [ "$multiplatform" == "true" ]
 then
   echo "Creating manifest for AMD, ARM and PPC64LE images"
   docker pull "${image_name}:${image_tag}-amd64"
-  docker pull "${image_name}:${image_tag}-arm64"
-  docker pull "${image_name}:${image_tag}-ppc64le"
-  docker manifest create "${image_name}:${image_tag}" "${image_name}:${image_tag}-arm64" "${image_name}:${image_tag}-amd64" "${image_name}:${image_tag}-ppc64le"
+  docker manifest create "${image_name}:${image_tag}" "${image_name}:${image_tag}-amd64"
 else
   echo "Creating manifest for the AMD image "
   docker pull "${image_name}:${image_tag}-amd64"
