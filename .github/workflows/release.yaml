@@ -84,8 +84,9 @@ jobs:
         env:
           IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}-${{ matrix.platform }}
           DIGEST_KEY: digest
+          ONLINE: false
         run: |
-          hack/build/ci/get-image-digest.sh
+          hack/build/ci/get-image-digest.sh $ONLINE
       - name: Sign image for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
@@ -131,8 +132,9 @@ jobs:
         env:
           IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
           DIGEST_KEY: ${{ matrix.digest_key }}
+          ONLINE: true
         run: |
-          hack/build/ci/get-image-digest.sh
+          hack/build/ci/get-image-digest.sh $ONLINE
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
