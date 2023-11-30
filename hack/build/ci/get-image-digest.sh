@@ -2,7 +2,7 @@
 
 readonly online="${1}"
 
-if [ -z "$2" ]
+if [ "$#" -ne 1 ];
 then
   echo "Usage: $0 <fetch_from_registry>"
   exit 1
