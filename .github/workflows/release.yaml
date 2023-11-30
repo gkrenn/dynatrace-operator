@@ -151,7 +151,7 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
           - registry: dockerhub
             url: docker.io
