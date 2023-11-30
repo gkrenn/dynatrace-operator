@@ -16,4 +16,4 @@ else
 fi
 
 digest=$(skopeo inspect ${PROVIDER}"${IMAGE}" --format "{{.Digest}}")
-echo "${DIGEST_KEY}=${digest}">> "$GITHUB_OUTPUT"
+echo "digest=${digest}">> "$GITHUB_OUTPUT"
