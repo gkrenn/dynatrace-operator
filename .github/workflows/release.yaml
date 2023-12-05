@@ -132,7 +132,7 @@ jobs:
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           combined: true
-          digest-key: ${{ matrix.platform }}
+          digest-key: ${{ matrix.registry }}
       - name: Get image digest
         id: digest
         env:
