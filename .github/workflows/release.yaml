@@ -6,7 +6,7 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+ # include prerelease tags too
 
 
-# jobs:
+jobs:
 #   job1: 
 #     name: Write some sample outputs
 #     runs-on: ubuntu-latest
