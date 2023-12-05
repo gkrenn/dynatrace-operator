@@ -127,23 +127,17 @@ jobs:
           password: ${{ secrets[matrix.password] }}
       - name: Create manifests for ${{matrix.registry}}
         uses: ./.github/actions/create-manifests
+        id: create-manifests
         with:
           version: ${{ needs.prepare.outputs.version }}
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           combined: true
           digest-key: ${{ matrix.registry }}
-      - name: Get image digest
-        id: digest
-        env:
-          IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
-          ONLINE: true
-        run: |
-          hack/build/ci/get-image-digest.sh $ONLINE
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
-          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.digest.outputs.digest}}
+          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.create-manifests.outputs[${{ matrix.registry }}]}}
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
