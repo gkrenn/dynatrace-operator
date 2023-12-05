@@ -179,7 +179,7 @@ jobs:
 
   attach-sbom:
     name: Attach sbom
-    needs: [ prepare, push, manifest ]
+    needs: [ manifest ]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
