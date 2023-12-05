@@ -135,7 +135,7 @@ jobs:
     permissions:
       id-token: write
     outputs:
-      create-manifests: ${{ toJSON(steps.create-manifests.outputs) }}
+      createmanifests: ${{ toJSON(steps.createmanifests.outputs) }}
     strategy:
       matrix:
         registry: [dockerhub]
@@ -156,7 +156,7 @@ jobs:
           password: ${{ secrets[matrix.password] }}
       - name: Create manifests for ${{matrix.registry}}
         uses: ./.github/actions/create-manifests
-        id: create-manifests
+        id: createmanifests
         with:
           version: v0.100.98
           registry: ${{ matrix.url }}
@@ -166,7 +166,7 @@ jobs:
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
-          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:v0.100.98@${{steps.create-manifests.outputs[matrix.registry]}}
+          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:v0.100.98@${{steps.createmanifests.outputs[matrix.registry]}}
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
