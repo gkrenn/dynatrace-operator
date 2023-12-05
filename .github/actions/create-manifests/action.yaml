@@ -13,6 +13,9 @@ inputs:
   combined:
     description: Should it create a combined manifests for amd64, arm64 and ppc64le builds
     required: true
+  digest-key:
+    description: The key to use for the digest
+    required: false
 runs:
   using: "composite"
   steps:
@@ -21,4 +24,4 @@ runs:
         IMAGE: ${{ inputs.registry }}/${{ inputs.repository }}
       shell: bash
       run: |
-        hack/build/ci/create-manifest.sh "${IMAGE}" "${{ inputs.version }}" ${{ inputs.combined }}
+        hack/build/ci/create-manifest.sh "${IMAGE}" "${{ inputs.version }}" ${{ inputs.combined }} ${{ inputs.digest-key }}

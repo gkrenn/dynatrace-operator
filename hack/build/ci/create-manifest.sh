@@ -1,14 +1,15 @@
 #!/bin/bash
 
-if [ -z "$2" ]
+if [ -z "$3" ]
 then
-  echo "Usage: $0 <image_name> <image_tag> <enable_multiplatform>"
+  echo "Usage: $0 <image_name> <image_tag> <enable_multiplatform> <digest-key>"
   exit 1
 fi
 
 image_name=$1
 image_tag=$2
 multiplatform=$3
+digest_key=$4
 
 if [ "$multiplatform" == "true" ]
 then
@@ -22,3 +23,6 @@ else
 fi
 
 docker manifest push "${image_name}:${image_tag}"
+sha256=$(docker manifest push "${image_name}:${image_tag}")
+
+echo "${digest_key}=${sha256}" >> "$GITHUB_OUTPUT"
