@@ -163,6 +163,9 @@ jobs:
           repository: ${{ secrets[matrix.repository] }}
           combined: true
           digestkey: ${{ matrix.registry }}
+      - name: Show all outputs of createmanifests step
+        run: | 
+          echo ${{ toJSON(steps.createmanifests.outputs) }}
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
