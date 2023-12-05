@@ -125,6 +125,9 @@ jobs:
           registry: ${{ matrix.url }}
           username: ${{ secrets[matrix.username] }}
           password: ${{ secrets[matrix.password] }}
+      - name: Print matrix registry
+        run: |
+          echo ${{ matrix.registry }}
       - name: Create manifests for ${{matrix.registry}}
         uses: ./.github/actions/create-manifests
         id: create-manifests
@@ -133,7 +136,7 @@ jobs:
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           combined: true
-          digest-key: ${{ matrix.registry }}
+          digestkey: ${{ matrix.registry }}
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
