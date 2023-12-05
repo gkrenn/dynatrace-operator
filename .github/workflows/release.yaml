@@ -159,6 +159,11 @@ jobs:
           registry: ${{ matrix.url }}
           username: ${{ secrets[matrix.username] }}
           password: ${{ secrets[matrix.password] }}
+      - name: Set variable
+        id: setvariable
+        run: |
+          echo "::set-output name=variable::value"
+          echo "test=test" >> $GITHUB_OUTPUT
       - name: Create manifests for ${{matrix.registry}}
         uses: ./.github/actions/create-manifests
         id: createmanifests
@@ -172,6 +177,8 @@ jobs:
         run: | 
           echo "${{ toJSON(steps.createmanifests.outputs) }}"
           echo "${{ steps.createmanifests.outputs }}"
+          echo "${{ steps.setvariable.outputs }}"
+          echo "${{ toJSON(steps.setvariable.outputs) }}"
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
