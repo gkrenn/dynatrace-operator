@@ -105,6 +105,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+    outputs:
+      create-manifests: ${{ toJSON(steps.create-manifests.outputs) }}
     strategy:
       matrix:
         registry: [dockerhub]
@@ -130,6 +132,7 @@ jobs:
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           combined: true
+          digest-key: ${{ matrix.platform }}
       - name: Get image digest
         id: digest
         env:
@@ -156,6 +159,7 @@ jobs:
         include:
           - registry: dockerhub
             url: docker.io
+            digest-key: dockerhub-digest
             repository: DOCKERHUB_REPOSITORY
             username: DOCKERHUB_USERNAME
             password: DOCKERHUB_PASSWORD
@@ -168,25 +172,29 @@ jobs:
           registry: ${{ matrix.url }}
           username: ${{ secrets[matrix.username] }}
           password: ${{ secrets[matrix.password] }}
-      - name: Get operator-image digest
+      # - name: Get operator-image digest
+      #   id: operator-digest
+      #   env:
+      #     IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
+      #     ONLINE: true
+      #   run: |
+      #     hack/build/ci/get-image-digest.sh $ONLINE
+      - name: Get image digest
         id: operator-digest
-        env:
-          IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
-          ONLINE: true
         run: |
-          hack/build/ci/get-image-digest.sh $ONLINE
-      - name: Create sbom for ${{matrix.registry}}
-        id: sbom
-        uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # 0.14.0
-        with:
-          image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.operator-digest.outputs.digest}}
-          format: 'cyclonedx'
-          output: 'result.json'
-          skip-dirs: '/usr/share/dynatrace-operator/third_party_licenses'
-      - name: Upload sbom to ${{matrix.registry}}
-        uses: ./.github/actions/upload-sbom
-        with:
-          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.operator-digest.outputs.digest}}
-          sbom: 'result.json'
-          signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          signing-password: ${{ secrets.COSIGN_PASSWORD }}
+          echo ${{ fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry] }}
+      # - name: Create sbom for ${{matrix.registry}}
+      #   id: sbom
+      #   uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # 0.14.0
+      #   with:
+      #     image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
+      #     format: 'cyclonedx'
+      #     output: 'result.json'
+      #     skip-dirs: '/usr/share/dynatrace-operator/third_party_licenses'
+      # - name: Upload sbom to ${{matrix.registry}}
+      #   uses: ./.github/actions/upload-sbom
+      #   with:
+      #     image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
+      #     sbom: 'result.json'
+      #     signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      #     signing-password: ${{ secrets.COSIGN_PASSWORD }}
