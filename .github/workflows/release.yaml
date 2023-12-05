@@ -6,7 +6,7 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+ # include prerelease tags too
 
 
-jobs:
+# jobs:
 #   job1: 
 #     name: Write some sample outputs
 #     runs-on: ubuntu-latest
@@ -21,6 +21,11 @@ jobs:
 #         run: |
 #           echo "::set-output name=${{matrix.platform}}::sample + ${{ matrix.platform }}"
 #           echo "::set-output name=sample2::sample2"
+#           echo "hello=test" >> $GITHUB_OUTPUT
+#       - name: Output all from sample step
+#         run: |
+#           echo "All outputs: ${{ toJSON(steps.sample.outputs) }}"
+#           echo "All outputs2: ${{ steps.sample.outputs }}"
 
 #   job2: 
 #     name: Read sample from output
