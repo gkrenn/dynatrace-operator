@@ -22,7 +22,7 @@ else
   docker manifest create "${image_name}:${image_tag}" "${image_name}:${image_tag}-amd64"
 fi
 
-docker manifest push "${image_name}:${image_tag}"
 sha256=$(docker manifest push "${image_name}:${image_tag}")
 
 echo "${digest_key}=${sha256}" >> "$GITHUB_OUTPUT"
+echo "${digest_key}=${sha256}" # todo delete

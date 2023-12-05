@@ -6,102 +6,131 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+ # include prerelease tags too
 
 
-jobs:
-  prepare:
-    permissions:
-      contents: read
-      id-token: write
-    name: Prepare properties
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - name: Prepare build parameters
-        id: prep
-        run: |
-          hack/build/ci/prepare-build-variables.sh
-      - name: Docker metadata
-        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
-        id: meta
-        with:
-          images: dynatrace/dynatrace-operator
-          tags: ${{ steps.prep.outputs.docker_image_tag }}
-          labels: |
-            ${{ steps.prep.outputs.docker_image_labels }}
-            vcs-ref=${{ github.sha }}
-    outputs:
-      labels: ${{ steps.meta.outputs.labels }}
-      version: ${{ steps.prep.outputs.docker_image_tag }}
-      version_without_prefix: ${{ steps.prep.outputs.docker_image_tag_without_prefix }}
+# jobs:
+#   job1: 
+#     name: Write some sample outputs
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         platform: [amd64]
+#     outputs: 
+#       all: ${{ toJSON(steps.sample.outputs) }}
+#     steps: 
+#       - name: Write sample output
+#         id: sample
+#         run: |
+#           echo "::set-output name=${{matrix.platform}}::sample + ${{ matrix.platform }}"
+#           echo "::set-output name=sample2::sample2"
 
-  build:
-    name: Build images
-    runs-on: ubuntu-latest
-    needs: [prepare]
-    strategy:
-      matrix:
-        platform: [amd64]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - name: Build image
-        uses: ./.github/actions/build-image
-        with:
-          platform: ${{ matrix.platform }}
-          labels: ${{ needs.prepare.outputs.labels }}
-          image-tag: ${{ needs.prepare.outputs.version }}
+#   job2: 
+#     name: Read sample from output
+#     runs-on: ubuntu-latest
+#     needs:  [job1]
+#     strategy:
+#       matrix:
+#         platform: [amd64]
+#     steps: 
+#       - name: Read sample output
+#         run: |
+#           echo "Sample output: ${{ fromJSON(needs.job1.outputs.all)[matrix.platform] }}"
+#           echo "Sample output2: ${{ needs.job1.outputs.all }}"
 
-  push:
-    name: Push images
-    needs: [prepare, build]
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    strategy:
-      matrix:
-        platform: [amd64]
-        registry: [dockerhub]
-        include:
-        - registry: dockerhub
-          url: docker.io
-          repository: DOCKERHUB_REPOSITORY
-          username: DOCKERHUB_USERNAME
-          password: DOCKERHUB_PASSWORD
-    steps:
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - name: Login to Registry
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
-        with:
-          registry: ${{ matrix.url }}
-          username: ${{ secrets[matrix.username] }}
-          password: ${{ secrets[matrix.password] }}
-      - name: Push ${{matrix.platform}} to ${{matrix.registry}}
-        uses: ./.github/actions/upload-image
-        with:
-          platform: ${{ matrix.platform }}
-          labels: ${{ needs.prepare.outputs.labels }}
-          version: ${{ needs.prepare.outputs.version }}
-          registry: ${{ matrix.url }}
-          repository: ${{ secrets[matrix.repository] }}
-      - name: Get image digest
-        id: digest
-        env:
-          IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}-${{ matrix.platform }}
-          ONLINE: false
-        run: |
-          hack/build/ci/get-image-digest.sh $ONLINE
-      - name: Sign image for ${{matrix.registry}}
-        uses: ./.github/actions/sign-image
-        with:
-          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}-${{ matrix.platform }}@${{steps.digest.outputs.digest}}
-          signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          signing-password: ${{ secrets.COSIGN_PASSWORD }}
+
+# jobs:
+#   prepare:
+#     permissions:
+#       contents: read
+#       id-token: write
+#     name: Prepare properties
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+#       - name: Prepare build parameters
+#         id: prep
+#         run: |
+#           hack/build/ci/prepare-build-variables.sh
+#       - name: Docker metadata
+#         uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+#         id: meta
+#         with:
+#           images: dynatrace/dynatrace-operator
+#           tags: ${{ steps.prep.outputs.docker_image_tag }}
+#           labels: |
+#             ${{ steps.prep.outputs.docker_image_labels }}
+#             vcs-ref=${{ github.sha }}
+#     outputs:
+#       labels: ${{ steps.meta.outputs.labels }}
+#       version: ${{ steps.prep.outputs.docker_image_tag }}
+#       version_without_prefix: ${{ steps.prep.outputs.docker_image_tag_without_prefix }}
+
+#   build:
+#     name: Build images
+#     runs-on: ubuntu-latest
+#     needs: [prepare]
+#     strategy:
+#       matrix:
+#         platform: [amd64]
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+#       - name: Build image
+#         uses: ./.github/actions/build-image
+#         with:
+#           platform: ${{ matrix.platform }}
+#           labels: ${{ needs.prepare.outputs.labels }}
+#           image-tag: ${{ needs.prepare.outputs.version }}
+
+#   push:
+#     name: Push images
+#     needs: [prepare, build]
+#     runs-on: ubuntu-latest
+#     permissions:
+#       id-token: write
+#     strategy:
+#       matrix:
+#         platform: [amd64]
+#         registry: [dockerhub]
+#         include:
+#         - registry: dockerhub
+#           url: docker.io
+#           repository: DOCKERHUB_REPOSITORY
+#           username: DOCKERHUB_USERNAME
+#           password: DOCKERHUB_PASSWORD
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+#       - name: Login to Registry
+#         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+#         with:
+#           registry: ${{ matrix.url }}
+#           username: ${{ secrets[matrix.username] }}
+#           password: ${{ secrets[matrix.password] }}
+#       - name: Push ${{matrix.platform}} to ${{matrix.registry}}
+#         uses: ./.github/actions/upload-image
+#         with:
+#           platform: ${{ matrix.platform }}
+#           labels: ${{ needs.prepare.outputs.labels }}
+#           version: ${{ needs.prepare.outputs.version }}
+#           registry: ${{ matrix.url }}
+#           repository: ${{ secrets[matrix.repository] }}
+#       - name: Get image digest
+#         id: digest
+#         env:
+#           IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}-${{ matrix.platform }}
+#           ONLINE: false
+#         run: |
+#           hack/build/ci/get-image-digest.sh $ONLINE
+#       - name: Sign image for ${{matrix.registry}}
+#         uses: ./.github/actions/sign-image
+#         with:
+#           image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}-${{ matrix.platform }}@${{steps.digest.outputs.digest}}
+#           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+#           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
   manifest:
     name: Create Docker manifests
     environment: Release
-    needs: [prepare, push]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -125,14 +154,11 @@ jobs:
           registry: ${{ matrix.url }}
           username: ${{ secrets[matrix.username] }}
           password: ${{ secrets[matrix.password] }}
-      - name: Print matrix registry
-        run: |
-          echo ${{ matrix.registry }}
       - name: Create manifests for ${{matrix.registry}}
         uses: ./.github/actions/create-manifests
         id: create-manifests
         with:
-          version: ${{ needs.prepare.outputs.version }}
+          version: v0.100.98
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           combined: true
@@ -140,58 +166,58 @@ jobs:
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
-          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{steps.create-manifests.outputs[matrix.registry]}}
+          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:v0.100.98@${{steps.create-manifests.outputs[matrix.registry]}}
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
-  attach-sbom:
-    name: Attach sbom
-    needs: [ prepare, push, manifest ]
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    strategy:
-      matrix:
-        registry: [dockerhub]
-        include:
-          - registry: dockerhub
-            url: docker.io
-            digest-key: dockerhub-digest
-            repository: DOCKERHUB_REPOSITORY
-            username: DOCKERHUB_USERNAME
-            password: DOCKERHUB_PASSWORD
-    steps:
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - name: Login to Registry
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
-        with:
-          registry: ${{ matrix.url }}
-          username: ${{ secrets[matrix.username] }}
-          password: ${{ secrets[matrix.password] }}
-      # - name: Get operator-image digest
-      #   id: operator-digest
-      #   env:
-      #     IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
-      #     ONLINE: true
-      #   run: |
-      #     hack/build/ci/get-image-digest.sh $ONLINE
-      - name: Get image digest
-        id: operator-digest
-        run: |
-          echo ${{ fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry] }}
-      # - name: Create sbom for ${{matrix.registry}}
-      #   id: sbom
-      #   uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # 0.14.0
-      #   with:
-      #     image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
-      #     format: 'cyclonedx'
-      #     output: 'result.json'
-      #     skip-dirs: '/usr/share/dynatrace-operator/third_party_licenses'
-      # - name: Upload sbom to ${{matrix.registry}}
-      #   uses: ./.github/actions/upload-sbom
-      #   with:
-      #     image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
-      #     sbom: 'result.json'
-      #     signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-      #     signing-password: ${{ secrets.COSIGN_PASSWORD }}
+  # attach-sbom:
+  #   name: Attach sbom
+  #   needs: [ prepare, push, manifest ]
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     id-token: write
+  #   strategy:
+  #     matrix:
+  #       registry: [dockerhub]
+  #       include:
+  #         - registry: dockerhub
+  #           url: docker.io
+  #           digest-key: dockerhub-digest
+  #           repository: DOCKERHUB_REPOSITORY
+  #           username: DOCKERHUB_USERNAME
+  #           password: DOCKERHUB_PASSWORD
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+  #     - name: Login to Registry
+  #       uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+  #       with:
+  #         registry: ${{ matrix.url }}
+  #         username: ${{ secrets[matrix.username] }}
+  #         password: ${{ secrets[matrix.password] }}
+  #     # - name: Get operator-image digest
+  #     #   id: operator-digest
+  #     #   env:
+  #     #     IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
+  #     #     ONLINE: true
+  #     #   run: |
+  #     #     hack/build/ci/get-image-digest.sh $ONLINE
+  #     - name: Get image digest
+  #       id: operator-digest
+  #       run: |
+  #         echo ${{ fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry] }}
+  #     # - name: Create sbom for ${{matrix.registry}}
+  #     #   id: sbom
+  #     #   uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # 0.14.0
+  #     #   with:
+  #     #     image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
+  #     #     format: 'cyclonedx'
+  #     #     output: 'result.json'
+  #     #     skip-dirs: '/usr/share/dynatrace-operator/third_party_licenses'
+  #     # - name: Upload sbom to ${{matrix.registry}}
+  #     #   uses: ./.github/actions/upload-sbom
+  #     #   with:
+  #     #     image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
+  #     #     sbom: 'result.json'
+  #     #     signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+  #     #     signing-password: ${{ secrets.COSIGN_PASSWORD }}
