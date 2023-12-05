@@ -26,3 +26,4 @@ sha256=$(docker manifest push "${image_name}:${image_tag}")
 
 echo "${digest_key}=${sha256}" >> "$GITHUB_OUTPUT"
 echo "${digest_key}=${sha256}" # todo delete
+echo "::set-output name=sample2::sample2" # todo delete
