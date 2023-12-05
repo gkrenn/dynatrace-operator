@@ -167,17 +167,6 @@ jobs:
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           combined: true
-          digestkey: ${{ matrix.registry }}
-      # - name: Create manifests for ${{matrix.registry}}
-      #   id: createmanifests
-      #   env:
-      #     VERSION: v0.100.98
-      #     REGISTRY: ${{ matrix.url }}
-      #     REPOSITORY: ${{ secrets[matrix.repository] }}
-      #     COMBINED: true
-      #     DIGESTKEY: ${{ matrix.registry }}
-      #   run: |
-      #     hack/build/ci/create-manifest.sh ${{ env.REGISTRY }}/${{ env.REPOSITORY }} ${{ env.VERSION }} ${{ env.COMBINED }} ${{ env.DIGESTKEY }}
       - name: Show all outputs of createmanifests step
         run: | 
           echo "${{ steps.create-manifests.outputs.digest }}"
@@ -188,54 +177,54 @@ jobs:
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
-  # attach-sbom:
-  #   name: Attach sbom
-  #   needs: [ prepare, push, manifest ]
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     id-token: write
-  #   strategy:
-  #     matrix:
-  #       registry: [dockerhub]
-  #       include:
-  #         - registry: dockerhub
-  #           url: docker.io
-  #           digest-key: dockerhub-digest
-  #           repository: DOCKERHUB_REPOSITORY
-  #           username: DOCKERHUB_USERNAME
-  #           password: DOCKERHUB_PASSWORD
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-  #     - name: Login to Registry
-  #       uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
-  #       with:
-  #         registry: ${{ matrix.url }}
-  #         username: ${{ secrets[matrix.username] }}
-  #         password: ${{ secrets[matrix.password] }}
-  #     # - name: Get operator-image digest
-  #     #   id: operator-digest
-  #     #   env:
-  #     #     IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
-  #     #     ONLINE: true
-  #     #   run: |
-  #     #     hack/build/ci/get-image-digest.sh $ONLINE
-  #     - name: Get image digest
-  #       id: operator-digest
-  #       run: |
-  #         echo ${{ fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry] }}
-  #     # - name: Create sbom for ${{matrix.registry}}
-  #     #   id: sbom
-  #     #   uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # 0.14.0
-  #     #   with:
-  #     #     image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
-  #     #     format: 'cyclonedx'
-  #     #     output: 'result.json'
-  #     #     skip-dirs: '/usr/share/dynatrace-operator/third_party_licenses'
-  #     # - name: Upload sbom to ${{matrix.registry}}
-  #     #   uses: ./.github/actions/upload-sbom
-  #     #   with:
-  #     #     image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
-  #     #     sbom: 'result.json'
-  #     #     signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-  #     #     signing-password: ${{ secrets.COSIGN_PASSWORD }}
+  attach-sbom:
+    name: Attach sbom
+    needs: [ prepare, push, manifest ]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        registry: [dockerhub]
+        include:
+          - registry: dockerhub
+            url: docker.io
+            digest-key: dockerhub-digest
+            repository: DOCKERHUB_REPOSITORY
+            username: DOCKERHUB_USERNAME
+            password: DOCKERHUB_PASSWORD
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Login to Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ${{ matrix.url }}
+          username: ${{ secrets[matrix.username] }}
+          password: ${{ secrets[matrix.password] }}
+      # - name: Get operator-image digest
+      #   id: operator-digest
+      #   env:
+      #     IMAGE: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}
+      #     ONLINE: true
+      #   run: |
+      #     hack/build/ci/get-image-digest.sh $ONLINE
+      - name: Get image digest
+        id: operator-digest
+        run: |
+          echo ${{ needs.manifest.outputs.digest }}
+      # - name: Create sbom for ${{matrix.registry}}
+      #   id: sbom
+      #   uses: aquasecurity/trivy-action@2b6a709cf9c4025c5438138008beaddbb02086f0 # 0.14.0
+      #   with:
+      #     image-ref: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
+      #     format: 'cyclonedx'
+      #     output: 'result.json'
+      #     skip-dirs: '/usr/share/dynatrace-operator/third_party_licenses'
+      # - name: Upload sbom to ${{matrix.registry}}
+      #   uses: ./.github/actions/upload-sbom
+      #   with:
+      #     image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{fromJSON(needs.manifest.outputs.create-manifests)[matrix.registry]}}
+      #     sbom: 'result.json'
+      #     signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      #     signing-password: ${{ secrets.COSIGN_PASSWORD }}
