@@ -1,8 +1,8 @@
 const fs = require('fs');
 const JSON5 = require('json5');
 
-const versionFile = process.argv[2];
-const renovateFile = process.argv[3];
+const versionFile = "release-branches.txt";
+const renovateFile = ".github/renovate.json5";
 
 // Read test and renovate files
 const releaseVersions = fs.readFileSync(versionFile, 'utf8').trim().split('\n');
