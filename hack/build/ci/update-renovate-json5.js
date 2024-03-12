@@ -5,7 +5,7 @@ const versionFile = "release-branches.txt";
 const renovateFile = ".github/renovate.json5";
 
 console.log(fs.readFileSync(versionFile, 'utf8'))
-consoleconsole.log(fs.readFileSync(renovateFile, 'utf8'))
+console.log(fs.readFileSync(renovateFile, 'utf8'))
 
 // Read test and renovate files
 const releaseVersions = fs.readFileSync(versionFile, 'utf8').trim().split('\n');
