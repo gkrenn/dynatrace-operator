@@ -71,7 +71,7 @@ const (
 
 <a name="MountAttemptsToTimeout"></a>
 
-## func [MountAttemptsToTimeout](<https://github.com/Dynatrace/dynatrace-operator/blob/main/pkg/api/v1beta3/dynakube/tmp/feature_flags.go#L254>)
+## func [MountAttemptsToTimeout](<https://github.com/gkrenn/dynatrace-operator/blob/main/pkg/api/v1beta3/dynakube/tmp/feature_flags.go#L254>)
 
 ```go
 func MountAttemptsToTimeout(maxAttempts int) string
