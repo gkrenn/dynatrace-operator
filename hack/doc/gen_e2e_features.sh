@@ -9,6 +9,9 @@ output=""
 # get dirs containing doc packages
 doc_dir_subdirs=$(find $doc_dir -type d)
 
+# order dirs alphabetically
+doc_dir_subdirs=$(echo "$doc_dir_subdirs" | sort)
+
 # append all gomarkdoc outputs in a single variable
 for dir in $doc_dir_subdirs; do
   if [ "$dir" != "$doc_dir" ]; then
