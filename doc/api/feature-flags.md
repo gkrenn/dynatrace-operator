@@ -77,4 +77,4 @@ const (
 func MountAttemptsToTimeout(maxAttempts int) string
 ```
 
-MountAttemptsToTimeout converts the (old) number ofmount attempts into a time.Duration string. The converted value is based on the exponential backoff's algorithm. The output is string because it's main purpose is to convert the value of an annotation to another annotation.
+MountAttemptsToTimeout converts the (old) number of csi mount attempts into a time.Duration string. The converted value is based on the exponential backoff's algorithm. The output is string because it's main purpose is to convert the value of an annotation to another annotation.
