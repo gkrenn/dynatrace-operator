@@ -15,7 +15,7 @@ doc_dir_subdirs=$(echo "$doc_dir_subdirs" | sort)
 # append all gomarkdoc outputs in a single variable
 for dir in $doc_dir_subdirs; do
   if [ "$dir" != "$doc_dir" ]; then
-    output="${output}$(GOARCH="e2e" gomarkdoc --repository.url "https://github.com/Dynatrace/dynatrace-operator" "${dir}" | sed 's/\\//g')"
+    output="${output}$(GOARCH="e2e" gomarkdoc --repository.url "https://github.com/Dynatrace/dynatrace-operator" --repository.path "/" --repository.default-branch "main" "${dir}" | sed 's/\\//g')"
     # remove gomarkdoc footer
     output=$(echo "${output}" | sed '$d')
   fi
