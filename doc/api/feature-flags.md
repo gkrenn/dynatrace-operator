@@ -9,7 +9,7 @@ import "github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/tmp"
 ## Index
 
 - [Constants](<#constants>)
-- [func MountAttemptsToTimeout(maxAttempts int) string](<#MountAttemptsToTimeout>)
+- [func MountAttemptsToTimeout(maxAttempts in t) string](<#MountAttemptsToTimeout>)
 
 ## Constants
 
