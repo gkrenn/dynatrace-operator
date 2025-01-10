@@ -16,6 +16,8 @@ const (
 	AnnotationOneAgentInjected = OneAgentPrefix + ".dynatrace.com/injected"
 	AnnotationOneAgentReason   = OneAgentPrefix + ".dynatrace.com/reason"
 
+	EmptyConnectionInfoReason = "EmptyConnectionInfo"
+
 	MetadataEnrichmentPrefix = "metadata-enrichment"
 	// AnnotationMetadataEnrichmentInject can be set at pod level to enable/disable metadata-enrichment injection.
 	AnnotationMetadataEnrichmentInject   = MetadataEnrichmentPrefix + ".dynatrace.com/inject"
@@ -55,7 +57,7 @@ const (
 	WebhookContainerName = "webhook"
 
 	// InstallContainerName is the name used for the install container
-	InstallContainerName = "dynatrace-operator"
+	InstallContainerName = "install-oneagent"
 
 	// AnnotationWorkloadKind is added to any injected pods when the metadata-enrichment feature is enabled
 	AnnotationWorkloadKind = "metadata.dynatrace.com/k8s.workload.kind"

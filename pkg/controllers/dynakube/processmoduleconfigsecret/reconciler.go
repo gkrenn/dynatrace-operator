@@ -9,18 +9,18 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/activegate/capability"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/connectioninfo"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/conditions"
-	k8ssecret "github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/secret"
+	secrets "github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/secret"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/timeprovider"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	PullSecretSuffix             = "-pmc-secret"
+	SecretSuffix                 = "-pmc-secret"
 	SecretKeyProcessModuleConfig = "ruxitagentproc.conf"
 )
 
@@ -37,84 +37,111 @@ func NewReconciler(clt client.Client,
 	dtClient dtclient.Client,
 	dk *dynakube.DynaKube,
 	timeProvider *timeprovider.Provider) *Reconciler {
-	r := &Reconciler{
+	return &Reconciler{
 		client:       clt,
 		apiReader:    apiReader,
 		dtClient:     dtClient,
 		dk:           dk,
 		timeProvider: timeProvider,
 	}
-
-	return r
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context) error {
-	if !(r.dk.CloudNativeFullstackMode() || r.dk.ApplicationMonitoringMode()) {
-		if meta.FindStatusCondition(*r.dk.Conditions(), pmcConditionType) == nil {
-			return nil
-		}
-
-		defer meta.RemoveStatusCondition(r.dk.Conditions(), pmcConditionType)
-
-		err := r.deleteSecret(ctx, &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      extendWithSuffix(r.dk.Name),
-				Namespace: r.dk.Namespace,
-			},
-		})
-
+	if r.dk.CloudNativeFullstackMode() || r.dk.ApplicationMonitoringMode() {
+		err := r.reconcileSecret(ctx)
 		if err != nil {
-			return errors.WithMessage(err, "failed to delete processModuleConfig secret")
+			log.Info("could not reconcile pull secret")
+
+			return errors.WithStack(err)
 		}
-
-		return nil
-	}
-
-	err := r.reconcileSecret(ctx)
-	if err != nil {
-		return errors.WithMessage(err, "failed to create or update processModuleConfig secret")
+	} else {
+		_ = meta.RemoveStatusCondition(&r.dk.Status.Conditions, pmcConditionType)
+		// TODO: Add cleanup here
+		log.Info("skipping process module config secret reconciler")
 	}
 
 	return nil
 }
 
 func (r *Reconciler) reconcileSecret(ctx context.Context) error {
-	if !conditions.IsOutdated(r.timeProvider, r.dk, pmcConditionType) {
-		return nil
+	if r.isFirstRun() {
+		err := r.createSecret(ctx)
+		if err != nil {
+			return errors.WithMessage(err, "could not get or create secret")
+		}
 	}
 
-	log.Info("processModuleConfig is outdated, updating")
-	conditions.SetSecretOutdated(r.dk.Conditions(), pmcConditionType, "secret is outdated, update in progress")
-
-	secret, err := r.prepareSecret(ctx)
-	if err != nil {
-		return err
+	if err := r.ensureSecret(ctx); err != nil {
+		return errors.WithMessage(err, "could not update secret")
 	}
-
-	return r.createOrUpdateSecret(ctx, secret)
-}
-
-func (r *Reconciler) createOrUpdateSecret(ctx context.Context, secret *corev1.Secret) error {
-	_, err := k8ssecret.Query(r.client, r.apiReader, log).WithOwner(r.dk).CreateOrUpdate(ctx, secret)
-	if err != nil {
-		conditions.SetKubeApiError(r.dk.Conditions(), pmcConditionType, err)
-
-		return errors.Errorf("failed to create or update secret '%s': %v", secret.Name, err)
-	}
-
-	conditions.SetSecretCreatedOrUpdated(r.dk.Conditions(), pmcConditionType, secret.Name)
 
 	return nil
 }
 
-func (r *Reconciler) deleteSecret(ctx context.Context, secret *corev1.Secret) error {
-	if err := k8ssecret.Query(r.client, r.apiReader, log).Delete(ctx, secret); err != nil {
+func (r *Reconciler) createSecret(ctx context.Context) error {
+	log.Info("creating process module config secret")
+
+	newSecret, err := r.prepareSecret(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err = r.client.Create(ctx, newSecret); err != nil {
 		conditions.SetKubeApiError(r.dk.Conditions(), pmcConditionType, err)
 
 		return err
 	}
 
+	conditions.SetSecretCreated(r.dk.Conditions(), pmcConditionType, newSecret.Name)
+
 	return nil
+}
+
+func (r *Reconciler) ensureSecret(ctx context.Context) error {
+	oldSecret, err := getSecret(ctx, r.apiReader, r.dk.Name, r.dk.Namespace)
+	if k8serrors.IsNotFound(err) {
+		log.Info("secret was removed unexpectedly, ensuring process module config secret")
+
+		return r.createSecret(ctx)
+	} else if err != nil {
+		conditions.SetKubeApiError(r.dk.Conditions(), pmcConditionType, err)
+
+		return err
+	}
+
+	if conditions.IsOutdated(r.timeProvider, r.dk, pmcConditionType) {
+		conditions.SetSecretOutdated(r.dk.Conditions(), pmcConditionType, oldSecret.Name+" is outdated, update in progress") // Necessary to update the LastTransitionTime, also it is a nice failsafe
+
+		return r.updateSecret(ctx, oldSecret)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) updateSecret(ctx context.Context, oldSecret *corev1.Secret) error {
+	log.Info("updating process module config secret")
+
+	newSecret, err := r.prepareSecret(ctx)
+	if err != nil {
+		return err
+	}
+
+	oldSecret.Data = newSecret.Data
+	if err = r.client.Update(ctx, oldSecret); err != nil {
+		conditions.SetKubeApiError(r.dk.Conditions(), pmcConditionType, err)
+
+		return err
+	}
+
+	conditions.SetSecretUpdated(r.dk.Conditions(), pmcConditionType, newSecret.Name)
+
+	return nil
+}
+
+func (r *Reconciler) isFirstRun() bool {
+	condition := meta.FindStatusCondition(r.dk.Status.Conditions, pmcConditionType)
+
+	return condition == nil
 }
 
 func (r *Reconciler) prepareSecret(ctx context.Context) (*corev1.Secret, error) {
@@ -125,7 +152,7 @@ func (r *Reconciler) prepareSecret(ctx context.Context) (*corev1.Secret, error) 
 		return nil, err
 	}
 
-	tenantToken, err := k8ssecret.GetDataFromSecretName(ctx, r.apiReader, types.NamespacedName{
+	tenantToken, err := secrets.GetDataFromSecretName(ctx, r.apiReader, types.NamespacedName{
 		Name:      r.dk.OneagentTenantSecret(),
 		Namespace: r.dk.Namespace,
 	}, connectioninfo.TenantTokenKey, log)
@@ -168,11 +195,11 @@ func (r *Reconciler) prepareSecret(ctx context.Context) (*corev1.Secret, error) 
 		return nil, err
 	}
 
-	newSecret, err := k8ssecret.Build(r.dk,
+	newSecret, err := secrets.Build(r.dk,
 		extendWithSuffix(r.dk.Name),
 		map[string][]byte{SecretKeyProcessModuleConfig: marshaled})
 
-	k8ssecret.SetType(corev1.SecretTypeOpaque)
+	secrets.SetType(corev1.SecretTypeOpaque)
 
 	if err != nil {
 		conditions.SetKubeApiError(r.dk.Conditions(), pmcConditionType, err)
@@ -184,9 +211,7 @@ func (r *Reconciler) prepareSecret(ctx context.Context) (*corev1.Secret, error) 
 }
 
 func GetSecretData(ctx context.Context, apiReader client.Reader, dynakubeName string, dynakubeNamespace string) (*dtclient.ProcessModuleConfig, error) {
-	typedName := types.NamespacedName{Namespace: dynakubeNamespace, Name: extendWithSuffix(dynakubeName)}
-
-	secret, err := k8ssecret.Query(nil, apiReader, log).Get(ctx, typedName)
+	secret, err := getSecret(ctx, apiReader, dynakubeName, dynakubeNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +222,17 @@ func GetSecretData(ctx context.Context, apiReader client.Reader, dynakubeName st
 	}
 
 	return processModuleConfig, nil
+}
+
+func getSecret(ctx context.Context, apiReader client.Reader, dynakubeName string, dynakubeNamespace string) (*corev1.Secret, error) {
+	var config corev1.Secret
+
+	err := apiReader.Get(ctx, client.ObjectKey{Name: extendWithSuffix(dynakubeName), Namespace: dynakubeNamespace}, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }
 
 func unmarshal(secret *corev1.Secret) (*dtclient.ProcessModuleConfig, error) {
@@ -211,5 +247,5 @@ func unmarshal(secret *corev1.Secret) (*dtclient.ProcessModuleConfig, error) {
 }
 
 func extendWithSuffix(name string) string {
-	return name + PullSecretSuffix
+	return name + SecretSuffix
 }

@@ -102,7 +102,9 @@ func LabelVersionDetection(t *testing.T) features.Feature {
 	defaultDynakube := *dynakubeComponents.New(
 		dynakubeComponents.WithName("dynakube-components-default"),
 		dynakubeComponents.WithApiUrl(secretConfig.ApiUrl),
-		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{}),
+		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{
+			UseCSIDriver: false,
+		}),
 		dynakubeComponents.WithNameBasedOneAgentNamespaceSelector(),
 	)
 
@@ -110,7 +112,9 @@ func LabelVersionDetection(t *testing.T) features.Feature {
 		dynakubeComponents.WithName("dynakube-components-labels"),
 		dynakubeComponents.WithAnnotations(map[string]string{dynakube.AnnotationFeatureLabelVersionDetection: "true"}),
 		dynakubeComponents.WithApiUrl(secretConfig.ApiUrl),
-		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{}),
+		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{
+			UseCSIDriver: false,
+		}),
 		dynakubeComponents.WithNameBasedOneAgentNamespaceSelector(),
 	)
 

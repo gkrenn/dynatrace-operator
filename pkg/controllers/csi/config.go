@@ -30,6 +30,7 @@ const (
 	OverlayVarDirPath    = "var"
 	OverlayWorkDirPath   = "work"
 	SharedAgentBinDir    = "codemodules"
+	SharedAppMountsDir   = "appmounts"
 	SharedAgentConfigDir = "config"
 
 	DaemonSetName = "dynatrace-oneagent-csi-driver"
@@ -37,7 +38,7 @@ const (
 	UnixUmask = 0000
 )
 
-var MetadataAccessPath = filepath.Join(DataPath, "csi.db?_journal=WAL")
+var MetadataAccessPath = filepath.Join(DataPath, "csi.db")
 
 type CSIOptions struct {
 	NodeId   string

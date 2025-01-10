@@ -109,9 +109,9 @@ func TestReconcileActiveGate(t *testing.T) {
 			testUID,
 			mock.AnythingOfType("string"))
 
-		mockClient.AssertCalled(t, "GetSettingsForMonitoredEntity",
+		mockClient.AssertCalled(t, "GetSettingsForMonitoredEntities",
 			mock.AnythingOfType("context.backgroundCtx"),
-			&dtclient.MonitoredEntity{EntityId: dk.Status.KubernetesClusterMEID, DisplayName: "", LastSeenTms: 0},
+			[]dtclient.MonitoredEntity{{EntityId: dk.Status.KubernetesClusterMEID, DisplayName: "", LastSeenTms: 0}},
 			mock.AnythingOfType("string"))
 
 		require.NoError(t, err)

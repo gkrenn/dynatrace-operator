@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -222,7 +221,7 @@ func TestGenerateMetadataEnrichmentSecret_ForDynakube(t *testing.T) {
 
 		{
 			dk := buildTestDynakube()
-			dk.Spec.MetadataEnrichment.Enabled = ptr.To(false)
+			dk.Spec.MetadataEnrichment.Enabled = false
 
 			testGenerateEndpointsSecret(t, dk, fakeClient)
 
@@ -304,7 +303,7 @@ func updatedTestDynakube() *dynakube.DynaKube {
 		},
 		Spec: dynakube.DynaKubeSpec{
 			APIURL:             testUpdatedApiUrl,
-			MetadataEnrichment: dynakube.MetadataEnrichment{Enabled: ptr.To(true)},
+			MetadataEnrichment: dynakube.MetadataEnrichment{Enabled: true},
 		},
 	}
 }
@@ -320,7 +319,7 @@ func updatedTestDynakubeWithMetricsIngestCapability(capabilities []activegate.Ca
 				Capabilities: capabilities,
 			},
 			APIURL:             testUpdatedApiUrl,
-			MetadataEnrichment: dynakube.MetadataEnrichment{Enabled: ptr.To(true)},
+			MetadataEnrichment: dynakube.MetadataEnrichment{Enabled: true},
 		},
 	}
 }
@@ -344,7 +343,7 @@ func buildTestDynakube() *dynakube.DynaKube {
 		},
 		Spec: dynakube.DynaKubeSpec{
 			APIURL:             testApiUrl,
-			MetadataEnrichment: dynakube.MetadataEnrichment{Enabled: ptr.To(true)},
+			MetadataEnrichment: dynakube.MetadataEnrichment{Enabled: true},
 		},
 	}
 }
@@ -361,7 +360,7 @@ func buildTestDynakubeWithMetricsIngestCapability(capabilities []activegate.Capa
 			},
 			APIURL: testApiUrl,
 			MetadataEnrichment: dynakube.MetadataEnrichment{
-				Enabled: ptr.To(true),
+				Enabled: true,
 			},
 		},
 	}

@@ -27,13 +27,25 @@ type GetSettingsResponse struct {
 	TotalCount int `json:"totalCount"`
 }
 
-type GetLogMonSettingsResponse struct {
-	Items      []logMonSettingsItem `json:"items"`
-	TotalCount int                  `json:"totalCount"`
-}
-
 type postSettingsResponse struct {
 	ObjectId string `json:"objectId"`
+}
+
+type getSettingsErrorResponse struct {
+	ErrorMessage getSettingsError `json:"error"`
+}
+
+type getSettingsError struct {
+	Message              string
+	ConstraintViolations constraintViolations `json:"constraintViolations,omitempty"`
+	Code                 int
+}
+
+type constraintViolations []struct {
+	ParameterLocation string
+	Location          string
+	Message           string
+	Path              string
 }
 
 const (
@@ -89,8 +101,8 @@ func (dtc *dynatraceClient) GetMonitoredEntitiesForKubeSystemUUID(ctx context.Co
 	return resDataJson.Entities, nil
 }
 
-func (dtc *dynatraceClient) GetSettingsForMonitoredEntity(ctx context.Context, monitoredEntity *MonitoredEntity, schemaId string) (GetSettingsResponse, error) {
-	if monitoredEntity == nil {
+func (dtc *dynatraceClient) GetSettingsForMonitoredEntities(ctx context.Context, monitoredEntities []MonitoredEntity, schemaId string) (GetSettingsResponse, error) {
+	if len(monitoredEntities) < 1 {
 		return GetSettingsResponse{TotalCount: 0}, nil
 	}
 
@@ -101,7 +113,7 @@ func (dtc *dynatraceClient) GetSettingsForMonitoredEntity(ctx context.Context, m
 
 	q := req.URL.Query()
 	q.Add(schemaIDsQueryParam, schemaId)
-	q.Add(scopesQueryParam, monitoredEntity.EntityId)
+	q.Add(scopesQueryParam, createScopes(monitoredEntities))
 	req.URL.RawQuery = q.Encode()
 
 	res, err := dtc.httpClient.Do(req)
@@ -123,40 +135,6 @@ func (dtc *dynatraceClient) GetSettingsForMonitoredEntity(ctx context.Context, m
 	return resDataJson, nil
 }
 
-func (dtc *dynatraceClient) GetSettingsForLogModule(ctx context.Context, monitoredEntity string) (GetLogMonSettingsResponse, error) {
-	if monitoredEntity == "" {
-		return GetLogMonSettingsResponse{TotalCount: 0}, nil
-	}
-
-	req, err := createBaseRequest(ctx, dtc.getSettingsUrl(true), http.MethodGet, dtc.apiToken, nil)
-	if err != nil {
-		return GetLogMonSettingsResponse{}, err
-	}
-
-	q := req.URL.Query()
-	q.Add(schemaIDsQueryParam, logMonitoringSettingsSchemaId)
-	q.Add(scopesQueryParam, monitoredEntity)
-	req.URL.RawQuery = q.Encode()
-
-	res, err := dtc.httpClient.Do(req)
-	defer utils.CloseBodyAfterRequest(res)
-
-	if err != nil {
-		log.Info("failed to retrieve logmonitoring settings")
-
-		return GetLogMonSettingsResponse{}, err
-	}
-
-	var resDataJson GetLogMonSettingsResponse
-
-	err = dtc.unmarshalToJson(res, &resDataJson)
-	if err != nil {
-		return GetLogMonSettingsResponse{}, fmt.Errorf("error parsing response body: %w", err)
-	}
-
-	return resDataJson, nil
-}
-
 func (dtc *dynatraceClient) unmarshalToJson(res *http.Response, resDataJson any) error {
 	resData, err := dtc.getServerResponseData(res)
 	if err != nil {
@@ -173,14 +151,14 @@ func (dtc *dynatraceClient) unmarshalToJson(res *http.Response, resDataJson any)
 
 func handleErrorArrayResponseFromAPI(response []byte, statusCode int) error {
 	if statusCode == http.StatusForbidden || statusCode == http.StatusUnauthorized {
-		var se serverErrorResponse
+		var se getSettingsErrorResponse
 		if err := json.Unmarshal(response, &se); err != nil {
 			return fmt.Errorf("response error: %d, can't unmarshal json response", statusCode)
 		}
 
 		return fmt.Errorf("response error: %d, %s", statusCode, se.ErrorMessage.Message)
 	} else {
-		var se []serverErrorResponse
+		var se []getSettingsErrorResponse
 		if err := json.Unmarshal(response, &se); err != nil {
 			return fmt.Errorf("response error: %d, can't unmarshal json response", statusCode)
 		}
@@ -201,4 +179,13 @@ func handleErrorArrayResponseFromAPI(response []byte, statusCode int) error {
 
 		return errors.New(sb.String())
 	}
+}
+
+func createScopes(monitoredEntities []MonitoredEntity) string {
+	scopes := make([]string, 0, len(monitoredEntities))
+	for _, entity := range monitoredEntities {
+		scopes = append(scopes, entity.EntityId)
+	}
+
+	return strings.Join(scopes, ",")
 }

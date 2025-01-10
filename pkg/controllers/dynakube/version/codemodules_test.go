@@ -27,7 +27,8 @@ func TestCodeModulesUpdater(t *testing.T) {
 			Spec: dynakube.DynaKubeSpec{
 				OneAgent: dynakube.OneAgentSpec{
 					ApplicationMonitoring: &dynakube.ApplicationMonitoringSpec{
-						Version: testImage.Tag,
+						Version:      testImage.Tag,
+						UseCSIDriver: true,
 						AppInjectionSpec: dynakube.AppInjectionSpec{
 							CodeModulesImage: testImage.String(),
 						},

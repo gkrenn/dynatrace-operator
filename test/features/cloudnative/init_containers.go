@@ -20,10 +20,6 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
 
-// old init container name, we need it for an upgrade scenario.
-// more details about rename https://github.com/Dynatrace/dynatrace-operator/pull/4025
-const oldInstallContainerName = "install-oneagent"
-
 func AssessSampleInitContainers(builder *features.FeatureBuilder, sampleApp *sample.App) {
 	builder.Assess("sample apps have working init containers", checkInitContainers(sampleApp))
 }
@@ -47,19 +43,21 @@ func checkInitContainers(sampleApp *sample.App) features.Func {
 			require.NotNil(t, podItem.Spec)
 			require.NotEmpty(t, podItem.Spec.InitContainers)
 
-			var oneAgentInstallInitContainer *corev1.Container
+			var oneAgentInstallContainer *corev1.Container
 
 			for _, initContainer := range podItem.Spec.InitContainers {
-				if initContainer.Name == oldInstallContainerName || initContainer.Name == webhook.InstallContainerName {
-					oneAgentInstallInitContainer = &initContainer // loop breaks after assignment, memory aliasing is not a problem
+				if initContainer.Name == webhook.InstallContainerName {
+					oneAgentInstallContainer = &initContainer // loop breaks after assignment, memory aliasing is not a problem
 
 					break
 				}
 			}
-			require.NotNil(t, oneAgentInstallInitContainer, "init container not found in '%s' pod", podItem.Name)
+			require.NotNil(t, oneAgentInstallContainer, "'%s' pod - '%s' container not found", podItem.Name, webhook.InstallContainerName)
+
+			assert.Equal(t, webhook.InstallContainerName, oneAgentInstallContainer.Name)
 
 			logStream, err := clientset.CoreV1().Pods(podItem.Namespace).GetLogs(podItem.Name, &corev1.PodLogOptions{
-				Container: oneAgentInstallInitContainer.Name,
+				Container: webhook.InstallContainerName,
 			}).Stream(ctx)
 
 			require.NoError(t, err)

@@ -3,12 +3,11 @@ package validation
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
-	"github.com/Dynatrace/dynatrace-operator/pkg/util/dtversion"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
+	"golang.org/x/mod/semver"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -18,7 +17,7 @@ const (
 
 	errorImageFieldSetWithoutCSIFlag = `The DynaKube specification attempts to enable ApplicationMonitoring mode and retrieve the respective image, but the CSI driver is not enabled.`
 
-	errorNodeSelectorConflict = `The Dynakube specification conflicts with another Dynakube's OneAgent or Standalone-LogMonitoring. Only one Agent per node is supported.
+	errorNodeSelectorConflict = `The DynaKube specification attempts to deploy a OneAgent, which conflicts with another DynaKube's OneAgent/LogModule. Only one Agent per node is supported.
 Use a nodeSelector to avoid this conflict. Conflicting DynaKubes: %s`
 
 	errorVolumeStorageReadOnlyModeConflict = `The DynaKube specification specifies a read-only host file system while OneAgent has volume storage enabled.`
@@ -26,10 +25,6 @@ Use a nodeSelector to avoid this conflict. Conflicting DynaKubes: %s`
 	warningOneAgentInstallerEnvVars = `The environment variables ONEAGENT_INSTALLER_SCRIPT_URL and ONEAGENT_INSTALLER_TOKEN are only relevant for an unsupported image type. Please ensure you are using a supported image.`
 
 	warningHostGroupConflict = `The DynaKube specification sets the host group using the --set-host-group parameter. Instead, specify the new spec.oneagent.hostGroup field. If both settings are used, the new field takes precedence over the parameter.`
-
-	versionRegex = `^\d+.\d+.\d+.\d{8}-\d{6}$`
-
-	versionInvalidMessage = "The OneAgent's version is only valid in the format 'major.minor.patch.timestamp', e.g. 1.0.0.20240101-000000"
 )
 
 func conflictingOneAgentConfiguration(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
@@ -60,7 +55,7 @@ func conflictingOneAgentConfiguration(_ context.Context, _ *Validator, dk *dynak
 }
 
 func conflictingOneAgentNodeSelector(ctx context.Context, dv *Validator, dk *dynakube.DynaKube) string {
-	if !dk.NeedsOneAgent() && !dk.LogMonitoring().IsStandalone() {
+	if !dk.NeedsOneAgent() || dk.FeatureEnableMultipleOsAgentsOnNode() {
 		return ""
 	}
 
@@ -79,9 +74,17 @@ func conflictingOneAgentNodeSelector(ctx context.Context, dv *Validator, dk *dyn
 			continue
 		}
 
-		if hasLogMonitoringSelectorConflict(dk, &item) || hasOneAgentSelectorConflict(dk, &item) {
+		if item.NeedsOneAgent() {
 			if hasConflictingMatchLabels(oneAgentNodeSelector, item.OneAgentNodeSelector()) {
 				log.Info("requested dynakube has conflicting OneAgent nodeSelector", "name", dk.Name, "namespace", dk.Namespace)
+
+				conflictingDynakubes[item.Name] = true
+			}
+		}
+
+		if item.NeedsLogModule() {
+			if hasConflictingMatchLabels(oneAgentNodeSelector, item.LogModuleNodeSelector()) {
+				log.Info("requested dynakube has conflicting LogModule nodeSelector", "name", dk.Name, "namespace", dk.Namespace)
 
 				conflictingDynakubes[item.Name] = true
 			}
@@ -95,18 +98,6 @@ func conflictingOneAgentNodeSelector(ctx context.Context, dv *Validator, dk *dyn
 	return ""
 }
 
-func hasLogMonitoringSelectorConflict(dk1, dk2 *dynakube.DynaKube) bool {
-	return dk1.LogMonitoring().IsStandalone() && dk1.ApiUrl() == dk2.ApiUrl() &&
-		(dk2.NeedsOneAgent() || dk2.LogMonitoring().IsStandalone()) &&
-		hasConflictingMatchLabels(dk1.OneAgentNodeSelector(), dk2.OneAgentNodeSelector())
-}
-
-func hasOneAgentSelectorConflict(dk1, dk2 *dynakube.DynaKube) bool {
-	return dk1.NeedsOneAgent() &&
-		(dk2.NeedsOneAgent() || dk2.LogMonitoring().IsStandalone() && dk1.ApiUrl() == dk2.ApiUrl()) &&
-		hasConflictingMatchLabels(dk1.OneAgentNodeSelector(), dk2.OneAgentNodeSelector())
-}
-
 func mapKeysToString(m map[string]bool, sep string) string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -116,9 +107,9 @@ func mapKeysToString(m map[string]bool, sep string) string {
 	return strings.Join(keys, sep)
 }
 
-func imageFieldSetWithoutCSIFlag(_ context.Context, v *Validator, dk *dynakube.DynaKube) string {
+func imageFieldSetWithoutCSIFlag(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
 	if dk.ApplicationMonitoringMode() {
-		if len(dk.Spec.OneAgent.ApplicationMonitoring.CodeModulesImage) > 0 && !v.modules.CSIDriver {
+		if !dk.NeedsCSIDriver() && len(dk.Spec.OneAgent.ApplicationMonitoring.CodeModulesImage) > 0 {
 			return errorImageFieldSetWithoutCSIFlag
 		}
 	}
@@ -158,7 +149,7 @@ func unsupportedOneAgentImage(_ context.Context, _ *Validator, dk *dynakube.Dyna
 
 func conflictingOneAgentVolumeStorageSettings(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
 	volumeStorageEnabled, volumeStorageSet := hasOneAgentVolumeStorageEnabled(dk)
-	if dk.UseReadOnlyOneAgents() && volumeStorageSet && !volumeStorageEnabled {
+	if dk.NeedsReadOnlyOneAgents() && volumeStorageSet && !volumeStorageEnabled {
 		return errorVolumeStorageReadOnlyModeConflict
 	}
 
@@ -173,20 +164,15 @@ func conflictingHostGroupSettings(_ context.Context, _ *Validator, dk *dynakube.
 	return ""
 }
 
-func isOneAgentVersionValid(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
+func validateOneAgentVersionIsSemVerCompliant(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
 	agentVersion := dk.CustomOneAgentVersion()
 	if agentVersion == "" {
 		return ""
 	}
 
-	_, err := dtversion.ToSemver(agentVersion)
-	if err != nil {
-		return versionInvalidMessage
-	}
-
-	match, err := regexp.MatchString(versionRegex, agentVersion)
-	if err != nil || !match {
-		return versionInvalidMessage
+	version := "v" + agentVersion
+	if !(semver.IsValid(version) && semver.Prerelease(version) == "" && semver.Build(version) == "" && len(strings.Split(version, ".")) == 3) {
+		return "Only semantic versions in the form of major.minor.patch (e.g. 1.0.0) are allowed!"
 	}
 
 	return ""

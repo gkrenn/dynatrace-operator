@@ -107,7 +107,7 @@ func TestDynatraceClient_GetMonitoredEntitiesForKubeSystemUUID(t *testing.T) {
 	})
 }
 
-func TestDynatraceClient_GetSettingsForMonitoredEntity(t *testing.T) {
+func TestDynatraceClient_GetSettingsForMonitoredEntities(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run(`settings for the given monitored entities exist`, func(t *testing.T) {
@@ -124,7 +124,7 @@ func TestDynatraceClient_GetSettingsForMonitoredEntity(t *testing.T) {
 		require.NotNil(t, dtc)
 
 		// act
-		actual, err := dtc.GetSettingsForMonitoredEntity(ctx, &expected[0], KubernetesSettingsSchemaId)
+		actual, err := dtc.GetSettingsForMonitoredEntities(ctx, expected, KubernetesSettingsSchemaId)
 
 		// assert
 		require.NoError(t, err)
@@ -147,7 +147,7 @@ func TestDynatraceClient_GetSettingsForMonitoredEntity(t *testing.T) {
 		require.NotNil(t, dtc)
 
 		// act
-		actual, err := dtc.GetSettingsForMonitoredEntity(ctx, &expected[0], KubernetesSettingsSchemaId)
+		actual, err := dtc.GetSettingsForMonitoredEntities(ctx, expected, KubernetesSettingsSchemaId)
 
 		// assert
 		require.NoError(t, err)
@@ -156,6 +156,8 @@ func TestDynatraceClient_GetSettingsForMonitoredEntity(t *testing.T) {
 	})
 
 	t.Run(`no settings for an empty list of monitored entities exist`, func(t *testing.T) {
+		// arrange
+		entities := []MonitoredEntity{}
 		// it is immaterial what we put here since no http call is executed when the list of
 		// monitored entities is empty, therefore also no settings will be returned
 		totalCount := 999
@@ -169,7 +171,7 @@ func TestDynatraceClient_GetSettingsForMonitoredEntity(t *testing.T) {
 		require.NotNil(t, dtc)
 
 		// act
-		actual, err := dtc.GetSettingsForMonitoredEntity(ctx, nil, KubernetesSettingsSchemaId)
+		actual, err := dtc.GetSettingsForMonitoredEntities(ctx, entities, KubernetesSettingsSchemaId)
 
 		// assert
 		require.NoError(t, err)
@@ -192,7 +194,7 @@ func TestDynatraceClient_GetSettingsForMonitoredEntity(t *testing.T) {
 		require.NotNil(t, dtc)
 
 		// act
-		actual, err := dtc.GetSettingsForMonitoredEntity(ctx, &entities[0], KubernetesSettingsSchemaId)
+		actual, err := dtc.GetSettingsForMonitoredEntities(ctx, entities, KubernetesSettingsSchemaId)
 
 		// assert
 		require.Error(t, err)

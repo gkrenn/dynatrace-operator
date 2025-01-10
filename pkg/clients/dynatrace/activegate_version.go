@@ -3,6 +3,7 @@ package dynatrace
 import (
 	"context"
 
+	"github.com/Dynatrace/dynatrace-operator/pkg/arch"
 	"github.com/pkg/errors"
 )
 
@@ -12,7 +13,7 @@ func (dtc *dynatraceClient) GetLatestActiveGateVersion(ctx context.Context, os s
 		LatestGatewayVersion string `json:"latestGatewayVersion"`
 	}{}
 
-	url := dtc.getLatestActiveGateVersionUrl(os)
+	url := dtc.getLatestActiveGateVersionUrl(os, arch.Arch)
 	err := dtc.makeRequestAndUnmarshal(ctx, url, dynatracePaaSToken, &response)
 
 	return response.LatestGatewayVersion, errors.WithStack(err)

@@ -7,7 +7,6 @@ import (
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/scheme"
 	"github.com/Dynatrace/dynatrace-operator/pkg/logd"
-	"github.com/Dynatrace/dynatrace-operator/pkg/util/hasher"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,11 +43,6 @@ func (c Generic[T, L]) Get(ctx context.Context, objectKey client.ObjectKey) (T, 
 func (c Generic[T, L]) Create(ctx context.Context, object T) error {
 	c.log(object).Info("creating")
 
-	err := hasher.AddAnnotation(object)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
 	if c.Owner != nil {
 		err := controllerutil.SetControllerReference(c.Owner, object, scheme.Scheme)
 		if err != nil {
@@ -61,11 +55,6 @@ func (c Generic[T, L]) Create(ctx context.Context, object T) error {
 
 func (c Generic[T, L]) Update(ctx context.Context, object T) error {
 	c.log(object).Info("updating")
-
-	err := hasher.AddAnnotation(object)
-	if err != nil {
-		return errors.WithStack(err)
-	}
 
 	if c.Owner != nil {
 		err := controllerutil.SetControllerReference(c.Owner, object, scheme.Scheme)
@@ -97,11 +86,6 @@ func (c Generic[T, L]) CreateOrUpdate(ctx context.Context, newObject T) (bool, e
 		return true, nil
 	} else if err != nil {
 		return false, err
-	}
-
-	err = hasher.AddAnnotation(newObject)
-	if err != nil {
-		return false, errors.WithStack(err)
 	}
 
 	if c.IsEqual(currentObject, newObject) {
@@ -218,22 +202,16 @@ func (c Generic[T, L]) createOrUpdateForNamespaces(ctx context.Context, object T
 	return goerrors.Join(errs...)
 }
 
-func (c Generic[T, L]) DeleteForNamespace(ctx context.Context, objectName string, namespace string) error {
-	c.Log.Info("deleting object from namespace", "name", objectName, "namespace", namespace)
-
-	c.Target.SetName(objectName)
-	c.Target.SetNamespace(namespace)
-
-	return c.Delete(ctx, c.Target)
-}
-
 func (c Generic[T, L]) DeleteForNamespaces(ctx context.Context, objectName string, namespaces []string) error {
 	c.Log.Info("deleting objects from multiple namespaces", "name", objectName, "len(namespaces)", len(namespaces))
 
 	errs := make([]error, 0, len(namespaces))
 
 	for _, namespace := range namespaces {
-		err := c.DeleteForNamespace(ctx, objectName, namespace)
+		c.Target.SetName(objectName)
+		c.Target.SetNamespace(namespace)
+
+		err := c.Delete(ctx, c.Target)
 		if err != nil {
 			errs = append(errs, err)
 		}

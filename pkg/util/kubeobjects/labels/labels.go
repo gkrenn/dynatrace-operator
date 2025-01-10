@@ -14,14 +14,13 @@ const (
 	AppComponentLabel = "app.kubernetes.io/component"
 	AppVersionLabel   = "app.kubernetes.io/version"
 
-	OneAgentComponentLabel      = "oneagent"
-	LogMonitoringComponentLabel = "logmonitoring"
-	KSPMComponentLabel          = "kspm"
-	ActiveGateComponentLabel    = "activegate"
-	WebhookComponentLabel       = "webhook"
-	EdgeConnectComponentLabel   = "edgeconnect"
-	ExtensionComponentLabel     = "dynatrace-extensions-controller"
-	CollectorComponentLabel     = "dynatrace-extensions-collector"
+	OneAgentComponentLabel    = "oneagent"
+	LogModuleComponentLabel   = "logmodule"
+	ActiveGateComponentLabel  = "activegate"
+	WebhookComponentLabel     = "webhook"
+	EdgeConnectComponentLabel = "edgeconnect"
+	ExtensionComponentLabel   = "dynatrace-extensions-controller"
+	CollectorComponentLabel   = "dynatrace-extensions-collector"
 )
 
 type AppMatchLabels struct {

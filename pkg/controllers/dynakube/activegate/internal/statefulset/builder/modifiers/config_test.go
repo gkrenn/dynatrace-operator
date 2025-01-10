@@ -78,6 +78,7 @@ func enableAllModifiers(dk *dynakube.DynaKube, capability capability.Capability)
 	setCustomPropertyUsage(capability, true)
 	setProxyUsage(dk, true)
 	setKubernetesMonitoringUsage(dk, true)
+	setServicePortUsage(dk, true)
 }
 
 func TestNoConflict(t *testing.T) {

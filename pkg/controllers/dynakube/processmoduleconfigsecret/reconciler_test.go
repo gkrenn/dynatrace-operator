@@ -52,7 +52,7 @@ func TestReconcile(t *testing.T) {
 		oldTransitionTime := condition.LastTransitionTime
 		require.NotNil(t, condition)
 		require.NotEmpty(t, oldTransitionTime)
-		assert.Equal(t, conditions.SecretCreatedOrUpdatedReason, condition.Reason)
+		assert.Equal(t, conditions.SecretCreatedReason, condition.Reason)
 		assert.Equal(t, metav1.ConditionTrue, condition.Status)
 
 		// update should be blocked by timeout
@@ -76,29 +76,19 @@ func TestReconcile(t *testing.T) {
 		condition = meta.FindStatusCondition(*dk.Conditions(), pmcConditionType)
 		require.NotNil(t, condition)
 		require.Greater(t, condition.LastTransitionTime.Time, oldTransitionTime.Time)
-		assert.Equal(t, conditions.SecretCreatedOrUpdatedReason, condition.Reason)
+		assert.Equal(t, conditions.SecretUpdatedReason, condition.Reason)
 		assert.Equal(t, metav1.ConditionTrue, condition.Status)
 	})
-	t.Run("Only runs when required, and cleans up condition and pmc secret", func(t *testing.T) {
+	t.Run("Only runs when required, and cleans up condition", func(t *testing.T) {
 		dk := createDynakube(dynakube.OneAgentSpec{
 			ClassicFullStack: &dynakube.HostInjectSpec{}})
 		conditions.SetSecretCreated(dk.Conditions(), pmcConditionType, "this is a test")
 
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      extendWithSuffix(testName),
-				Namespace: testNamespace,
-			},
-			Data: map[string][]byte{SecretKeyProcessModuleConfig: []byte("test")},
-		}
-		mockK8sClient := fake.NewClient(secret)
-
-		reconciler := NewReconciler(mockK8sClient, mockK8sClient, nil, dk, timeprovider.New())
+		reconciler := NewReconciler(nil, nil, nil, dk, timeprovider.New())
 		err := reconciler.Reconcile(context.Background())
 
 		require.NoError(t, err)
 		assert.Empty(t, *dk.Conditions())
-		assert.Error(t, mockK8sClient.Get(context.Background(), client.ObjectKey{Name: extendWithSuffix(testName), Namespace: testNamespace}, &corev1.Secret{}))
 	})
 	t.Run("No proxy is set when proxy enabled and custom no proxy set", func(t *testing.T) {
 		dk := createDynakube(dynakube.OneAgentSpec{
@@ -167,7 +157,7 @@ func checkSecretForValue(t *testing.T, k8sClient client.Client, shouldContain st
 
 	processModuleConfig, ok := secret.Data[SecretKeyProcessModuleConfig]
 	require.True(t, ok)
-	require.Contains(t, string(processModuleConfig), shouldContain)
+	require.True(t, strings.Contains(string(processModuleConfig), shouldContain))
 }
 
 func createDynakube(oneAgentSpec dynakube.OneAgentSpec) *dynakube.DynaKube {

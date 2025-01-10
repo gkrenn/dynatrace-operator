@@ -65,15 +65,13 @@ func AddAnnotation(object metav1.Object) error {
 		annotations = map[string]string{}
 	}
 
-	if _, ok := annotations[AnnotationHash]; !ok {
-		objectHash, err := GenerateHash(object)
-		if err != nil {
-			return err
-		}
-
-		annotations[AnnotationHash] = objectHash
-		object.SetAnnotations(annotations)
+	objectHash, err := GenerateHash(object)
+	if err != nil {
+		return err
 	}
+
+	annotations[AnnotationHash] = objectHash
+	object.SetAnnotations(annotations)
 
 	return nil
 }

@@ -166,7 +166,7 @@ tests:
             containers:
               - args:
                   - csi-server
-                  - "--endpoint=unix:/csi/csi.sock"
+                  - "--endpoint=unix://csi/csi.sock"
                   - "--node-id=$(KUBE_NODE_NAME)"
                 env:
                   - name: POD_NAMESPACE
@@ -182,7 +182,7 @@ tests:
                 image: image-name
                 imagePullPolicy: Always
                 livenessProbe:
-                  failureThreshold: 5
+                  failureThreshold: 3
                   httpGet:
                     path: "/healthz"
                     port: healthz
@@ -190,7 +190,7 @@ tests:
                   initialDelaySeconds: 5
                   periodSeconds: 5
                   successThreshold: 1
-                  timeoutSeconds: 4
+                  timeoutSeconds: 1
                 name: server
                 ports:
                   - containerPort: 9808
@@ -236,9 +236,6 @@ tests:
                       fieldRef:
                         apiVersion: v1
                         fieldPath: metadata.namespace
-                envFrom:
-                  - configMapRef:
-                      name: install-config
                 image: image-name
                 imagePullPolicy: Always
                 startupProbe:
@@ -324,7 +321,6 @@ tests:
               - args:
                   - "--csi-address=/csi/csi.sock"
                   - "--health-port=9808"
-                  - "--probe-timeout=4s"
                 command:
                   - livenessprobe
                 image: image-name

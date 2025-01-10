@@ -32,7 +32,9 @@ func TestIsOutdated(t *testing.T) {
 	t.Run("True condition + current timestamp => NOT outdated", func(t *testing.T) {
 		tp := timeprovider.New()
 		dk := &dynakube.DynaKube{
-			Spec: dynakube.DynaKubeSpec{},
+			Spec: dynakube.DynaKubeSpec{
+				DynatraceApiRequestThreshold: dynakube.DefaultMinRequestThresholdMinutes,
+			},
 		}
 
 		SetSecretCreated(dk.Conditions(), testingConditionType, "")

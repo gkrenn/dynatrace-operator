@@ -6,8 +6,6 @@ import (
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/activegate"
-	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/kspm"
-	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/logmonitoring"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/installconfig"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,58 +23,23 @@ func TestIsModuleDisabled(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			title:           "csi module disabled but also configured in dk => error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{CloudNativeFullStack: &dynakube.CloudNativeFullStackSpec{}}}},
-			modules:         installconfig.Modules{OneAgent: true, CSIDriver: false},
-			moduleFunc:      isCSIModuleDisabled,
-			expectedMessage: errorCSIModuleRequired,
-		},
-		{
-			title:           "csi module disabled but not configured => no error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{CloudNativeFullStack: nil}}},
-			modules:         installconfig.Modules{OneAgent: true, CSIDriver: false},
-			moduleFunc:      isCSIModuleDisabled,
-			expectedMessage: "",
-		},
-		{
-			title:           "csi module enabled and also configured => no error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{CloudNativeFullStack: &dynakube.CloudNativeFullStackSpec{}}}},
-			modules:         installconfig.Modules{OneAgent: true, CSIDriver: true},
-			moduleFunc:      isCSIModuleDisabled,
-			expectedMessage: "",
-		},
-		{
-			title:           "csi module disabled and app-monitoring configured => no error, as it's optional for app-monitoring",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{ApplicationMonitoring: &dynakube.ApplicationMonitoringSpec{}}}},
-			modules:         installconfig.Modules{OneAgent: true, CSIDriver: false},
-			moduleFunc:      isCSIModuleDisabled,
-			expectedMessage: "",
-		},
-		{
-			title:           "csi module disabled and host-monitoring configured => no error, as it's optional for host-monitoring",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{HostMonitoring: &dynakube.HostInjectSpec{}}}},
-			modules:         installconfig.Modules{OneAgent: true, CSIDriver: true},
-			moduleFunc:      isCSIModuleDisabled,
-			expectedMessage: "",
-		},
-		{
 			title:           "oa module disabled but also configured in dk => error",
 			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{CloudNativeFullStack: &dynakube.CloudNativeFullStackSpec{}}}},
-			modules:         installconfig.Modules{OneAgent: false, CSIDriver: true},
+			modules:         installconfig.Modules{OneAgent: false},
 			moduleFunc:      isOneAgentModuleDisabled,
 			expectedMessage: errorOneAgentModuleDisabled,
 		},
 		{
 			title:           "oa module disabled but not configured => no error",
 			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{CloudNativeFullStack: nil}}},
-			modules:         installconfig.Modules{OneAgent: false, CSIDriver: true},
+			modules:         installconfig.Modules{OneAgent: false},
 			moduleFunc:      isOneAgentModuleDisabled,
 			expectedMessage: "",
 		},
 		{
 			title:           "oa module enabled and also configured => no error",
 			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{CloudNativeFullStack: &dynakube.CloudNativeFullStackSpec{}}}},
-			modules:         installconfig.Modules{OneAgent: true, CSIDriver: true},
+			modules:         installconfig.Modules{OneAgent: true},
 			moduleFunc:      isOneAgentModuleDisabled,
 			expectedMessage: "",
 		},
@@ -103,7 +66,7 @@ func TestIsModuleDisabled(t *testing.T) {
 		},
 		{
 			title:           "ecc module disabled but also configured in dk => error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{Extensions: &dynakube.ExtensionsSpec{}}},
+			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{Extensions: dynakube.ExtensionsSpec{Enabled: true}}},
 			modules:         installconfig.Modules{Extensions: false},
 			moduleFunc:      isExtensionsModuleDisabled,
 			expectedMessage: errorExtensionsModuleDisabled,
@@ -117,51 +80,30 @@ func TestIsModuleDisabled(t *testing.T) {
 		},
 		{
 			title:           "ecc module enabled and also configured => no error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{Extensions: &dynakube.ExtensionsSpec{}}},
+			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{Extensions: dynakube.ExtensionsSpec{Enabled: true}}},
 			modules:         installconfig.Modules{Extensions: true},
 			moduleFunc:      isExtensionsModuleDisabled,
 			expectedMessage: "",
 		},
 		{
-			title:           "logmonitoring module disabled but also configured in dk => error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{LogMonitoring: &logmonitoring.Spec{}}},
-			modules:         installconfig.Modules{LogMonitoring: false},
-			moduleFunc:      isLogMonitoringModuleDisabled,
-			expectedMessage: errorLogMonitoringModuleDisabled,
+			title:           "logmodule module disabled but also configured in dk => error",
+			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{LogModule: dynakube.LogModuleSpec{Enabled: true}}},
+			modules:         installconfig.Modules{LogModule: false},
+			moduleFunc:      isLogModuleModuleDisabled,
+			expectedMessage: errorLogModuleModuleDisabled,
 		},
 		{
-			title:           "logmonitoring module disabled but not configured => no error",
+			title:           "logmodule module disabled but not configured => no error",
 			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{}},
-			modules:         installconfig.Modules{LogMonitoring: false},
-			moduleFunc:      isLogMonitoringModuleDisabled,
+			modules:         installconfig.Modules{LogModule: false},
+			moduleFunc:      isLogModuleModuleDisabled,
 			expectedMessage: "",
 		},
 		{
-			title:           "logmonitoring module enabled and also configured => no error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{LogMonitoring: &logmonitoring.Spec{}}},
-			modules:         installconfig.Modules{LogMonitoring: true},
-			moduleFunc:      isLogMonitoringModuleDisabled,
-			expectedMessage: "",
-		},
-		{
-			title:           "kspm module disabled but also configured in dk => error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{Kspm: &kspm.Spec{}}},
-			modules:         installconfig.Modules{KSPM: false},
-			moduleFunc:      isKSPMDisabled,
-			expectedMessage: errorKSPMDisabled,
-		},
-		{
-			title:           "kspm module disabled but not configured => no error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{}},
-			modules:         installconfig.Modules{KSPM: false},
-			moduleFunc:      isKSPMDisabled,
-			expectedMessage: "",
-		},
-		{
-			title:           "kspm module enabled and also configured => no error",
-			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{Kspm: &kspm.Spec{}}},
-			modules:         installconfig.Modules{KSPM: true},
-			moduleFunc:      isKSPMDisabled,
+			title:           "logmodule module enabled and also configured => no error",
+			dk:              dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{LogModule: dynakube.LogModuleSpec{Enabled: true}}},
+			modules:         installconfig.Modules{LogModule: true},
+			moduleFunc:      isLogModuleModuleDisabled,
 			expectedMessage: "",
 		},
 	}
@@ -172,33 +114,4 @@ func TestIsModuleDisabled(t *testing.T) {
 			assert.Equal(t, test.expectedMessage, errMsg)
 		})
 	}
-}
-
-func TestIsCSIDriverRequired(t *testing.T) {
-	t.Run("DynaKube with cloud native", func(t *testing.T) {
-		dk := dynakube.DynaKube{Spec: dynakube.DynaKubeSpec{OneAgent: dynakube.OneAgentSpec{CloudNativeFullStack: &dynakube.CloudNativeFullStackSpec{}}}}
-		assert.True(t, isCSIRequired(&dk))
-	})
-
-	t.Run("DynaKube with host monitoring", func(t *testing.T) {
-		dk := dynakube.DynaKube{
-			Spec: dynakube.DynaKubeSpec{
-				OneAgent: dynakube.OneAgentSpec{
-					HostMonitoring: &dynakube.HostInjectSpec{},
-				},
-			},
-		}
-		assert.False(t, isCSIRequired(&dk))
-	})
-
-	t.Run("DynaKube with application monitoring", func(t *testing.T) {
-		dk := dynakube.DynaKube{
-			Spec: dynakube.DynaKubeSpec{
-				OneAgent: dynakube.OneAgentSpec{
-					ApplicationMonitoring: &dynakube.ApplicationMonitoringSpec{},
-				},
-			},
-		}
-		assert.False(t, isCSIRequired(&dk))
-	})
 }

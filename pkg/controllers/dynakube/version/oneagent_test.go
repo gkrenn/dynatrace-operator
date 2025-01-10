@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 func TestOneAgentUpdater(t *testing.T) {
@@ -29,7 +28,7 @@ func TestOneAgentUpdater(t *testing.T) {
 			Spec: dynakube.DynaKubeSpec{
 				OneAgent: dynakube.OneAgentSpec{
 					ClassicFullStack: &dynakube.HostInjectSpec{
-						AutoUpdate: ptr.To(false),
+						AutoUpdate: false,
 						Image:      testImage.String(),
 						Version:    testImage.Tag,
 					},

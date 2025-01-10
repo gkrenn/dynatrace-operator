@@ -7,6 +7,7 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/consts"
 	"github.com/Dynatrace/dynatrace-operator/pkg/injection/startup"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/address"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
 	k8spod "github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/pod"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/resources"
@@ -15,7 +16,6 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/metadata"
 	oamutation "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/oneagent"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 )
 
 func createInstallInitContainerBase(webhookImage, clusterID string, pod *corev1.Pod, dk dynakube.DynaKube) *corev1.Container {
@@ -44,7 +44,7 @@ func initContainerResources(dk dynakube.DynaKube) corev1.ResourceRequirements {
 		return *customInitResources
 	}
 
-	if !dk.IsCSIAvailable() {
+	if !dk.NeedsCSIDriver() {
 		return corev1.ResourceRequirements{}
 	}
 
@@ -60,9 +60,9 @@ func defaultInitContainerResources() corev1.ResourceRequirements {
 
 func securityContextForInitContainer(pod *corev1.Pod, dk dynakube.DynaKube) *corev1.SecurityContext {
 	initSecurityCtx := corev1.SecurityContext{
-		ReadOnlyRootFilesystem:   ptr.To(true),
-		AllowPrivilegeEscalation: ptr.To(false),
-		Privileged:               ptr.To(false),
+		ReadOnlyRootFilesystem:   address.Of(true),
+		AllowPrivilegeEscalation: address.Of(false),
+		Privileged:               address.Of(false),
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{
 				"ALL",
@@ -81,8 +81,8 @@ func combineSecurityContexts(baseSecurityCtx corev1.SecurityContext, pod corev1.
 	containerSecurityCtx := pod.Spec.Containers[0].SecurityContext
 	podSecurityCtx := pod.Spec.SecurityContext
 
-	baseSecurityCtx.RunAsUser = ptr.To(defaultUser)
-	baseSecurityCtx.RunAsGroup = ptr.To(defaultGroup)
+	baseSecurityCtx.RunAsUser = address.Of(defaultUser)
+	baseSecurityCtx.RunAsGroup = address.Of(defaultGroup)
 
 	if hasPodUserSet(podSecurityCtx) {
 		baseSecurityCtx.RunAsUser = podSecurityCtx.RunAsUser
@@ -100,7 +100,7 @@ func combineSecurityContexts(baseSecurityCtx corev1.SecurityContext, pod corev1.
 		baseSecurityCtx.RunAsGroup = containerSecurityCtx.RunAsGroup
 	}
 
-	baseSecurityCtx.RunAsNonRoot = ptr.To(isNonRoot(&baseSecurityCtx))
+	baseSecurityCtx.RunAsNonRoot = address.Of(isNonRoot(&baseSecurityCtx))
 
 	return &baseSecurityCtx
 }
@@ -148,7 +148,7 @@ func addSeccompProfile(ctx *corev1.SecurityContext, dk dynakube.DynaKube) {
 	}
 }
 
-func updateContainerInfo(request *dtwebhook.BaseRequest, installContainer *corev1.Container) bool {
+func updateContainerInfo(request *dtwebhook.ReinvocationRequest, installContainer *corev1.Container) bool {
 	pod := request.Pod
 	if installContainer == nil {
 		installContainer = findInstallContainer(pod.Spec.InitContainers)

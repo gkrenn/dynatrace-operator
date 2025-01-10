@@ -9,7 +9,6 @@ import "github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/tmp"
 ## Index
 
 - [Constants](<#constants>)
-- [func MountAttemptsToTimeout(maxAttempts in t) string](<#MountAttemptsToTimeout>)
 
 ## Constants
 
@@ -24,8 +23,6 @@ const (
 
     // Deprecated: AnnotationFeatureDisableActiveGateUpdates use AnnotationFeatureActiveGateUpdates instead.
     AnnotationFeatureDisableActiveGateUpdates = AnnotationFeaturePrefix + "disable-activegate-updates"
-    // Deprecated: AnnotationFeatureActiveGateIgnoreProxy use AnnotationFeatureNoProxy instead.
-    AnnotationFeatureActiveGateIgnoreProxy = AnnotationFeaturePrefix + "activegate-ignore-proxy"
 
     AnnotationFeatureActiveGateUpdates = AnnotationFeaturePrefix + "activegate-updates"
 
@@ -33,13 +30,13 @@ const (
     AnnotationFeatureAutomaticK8sApiMonitoring            = AnnotationFeaturePrefix + "automatic-kubernetes-api-monitoring"
     AnnotationFeatureAutomaticK8sApiMonitoringClusterName = AnnotationFeaturePrefix + "automatic-kubernetes-api-monitoring-cluster-name"
     AnnotationFeatureK8sAppEnabled                        = AnnotationFeaturePrefix + "k8s-app-enabled"
+    AnnotationFeatureActiveGateIgnoreProxy                = AnnotationFeaturePrefix + "activegate-ignore-proxy"
 
     AnnotationFeatureNoProxy = AnnotationFeaturePrefix + "no-proxy"
 
-    // Deprecated: AnnotationFeatureOneAgentIgnoreProxy use AnnotationFeatureNoProxy instead.
-    AnnotationFeatureOneAgentIgnoreProxy = AnnotationFeaturePrefix + "oneagent-ignore-proxy"
-
+    AnnotationFeatureMultipleOsAgentsOnNode         = AnnotationFeaturePrefix + "multiple-osagents-on-node"
     AnnotationFeatureOneAgentMaxUnavailable         = AnnotationFeaturePrefix + "oneagent-max-unavailable"
+    AnnotationFeatureOneAgentIgnoreProxy            = AnnotationFeaturePrefix + "oneagent-ignore-proxy"
     AnnotationFeatureOneAgentInitialConnectRetry    = AnnotationFeaturePrefix + "oneagent-initial-connect-retry-ms"
     AnnotationFeatureRunOneAgentContainerPrivileged = AnnotationFeaturePrefix + "oneagent-privileged"
 
@@ -53,28 +50,16 @@ const (
 
     // CSI.
     AnnotationFeatureMaxFailedCsiMountAttempts = AnnotationFeaturePrefix + "max-csi-mount-attempts"
-    AnnotationFeatureMaxCsiMountTimeout        = AnnotationFeaturePrefix + "max-csi-mount-timeout"
     AnnotationFeatureReadOnlyCsiVolume         = AnnotationFeaturePrefix + "injection-readonly-volume"
 )
 ```
 
-<a name="DefaultMaxCsiMountTimeout"></a>
+<a name="DefaultMaxFailedCsiMountAttempts"></a>
 
 ```go
 const (
-    DefaultMaxCsiMountTimeout               = "10m"
     DefaultMaxFailedCsiMountAttempts        = 10
     DefaultMinRequestThresholdMinutes       = 15
     IstioDefaultOneAgentInitialConnectRetry = 6000
 )
 ```
-
-<a name="MountAttemptsToTimeout"></a>
-
-## func [MountAttemptsToTimeout](<https://github.com/Dynatrace/dynatrace-operator/blob/main/pkg/api/v1beta3/dynakube/tmp/feature_flags.go#L254>)
-
-```go
-func MountAttemptsToTimeout(maxAttempts int) string
-```
-
-MountAttemptsToTimeout converts the (old) number of csi mount attempts into a time.Duration string. The converted value is based on the exponential backoff's algorithm. The output is string because it's main purpose is to convert the value of an annotation to another annotation.

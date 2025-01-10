@@ -3,6 +3,7 @@ package deployment
 import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1alpha2/edgeconnect"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/edgeconnect/consts"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/address"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/labels"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/resources"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
@@ -11,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -53,9 +53,9 @@ func create(ec *edgeconnect.EdgeConnect) *appsv1.Deployment {
 				Spec: corev1.PodSpec{
 					Containers:                    []corev1.Container{edgeConnectContainer(ec)},
 					ImagePullSecrets:              prepareImagePullSecrets(ec),
-					ServiceAccountName:            ec.GetServiceAccountName(),
-					DeprecatedServiceAccount:      ec.GetServiceAccountName(),
-					TerminationGracePeriodSeconds: ptr.To(int64(30)),
+					ServiceAccountName:            ec.Spec.ServiceAccountName,
+					DeprecatedServiceAccount:      ec.Spec.ServiceAccountName,
+					TerminationGracePeriodSeconds: address.Of(int64(30)),
 					Volumes:                       prepareVolumes(ec),
 					NodeSelector:                  ec.Spec.NodeSelector,
 					Tolerations:                   ec.Spec.Tolerations,
@@ -110,12 +110,12 @@ func edgeConnectContainer(ec *edgeconnect.EdgeConnect) corev1.Container {
 		Env:             ec.Spec.Env,
 		Resources:       prepareResourceRequirements(ec),
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-			Privileged:               ptr.To(false),
-			ReadOnlyRootFilesystem:   ptr.To(true),
-			RunAsGroup:               ptr.To(unprivilegedGroup),
-			RunAsUser:                ptr.To(unprivilegedUser),
-			RunAsNonRoot:             ptr.To(true),
+			AllowPrivilegeEscalation: address.Of(false),
+			Privileged:               address.Of(false),
+			ReadOnlyRootFilesystem:   address.Of(true),
+			RunAsGroup:               address.Of(unprivilegedGroup),
+			RunAsUser:                address.Of(unprivilegedUser),
+			RunAsNonRoot:             address.Of(true),
 		},
 		VolumeMounts: prepareVolumeMounts(ec),
 	}

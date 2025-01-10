@@ -36,8 +36,8 @@ type OneAgentSpec struct {
 }
 
 type CloudNativeFullStackSpec struct {
-	HostInjectSpec   `json:",inline"`
 	AppInjectionSpec `json:",inline"`
+	HostInjectSpec   `json:",inline"`
 }
 
 type HostInjectSpec struct {
@@ -57,18 +57,12 @@ type HostInjectSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Node Selector",order=17,xDescriptors="urn:alm:descriptor:com.tectonic.ui:selector:Node"
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
-	// Disables automatic restarts of OneAgent pods in case a new version is available (https://www.dynatrace.com/support/help/setup-and-configuration/setup-on-container-platforms/kubernetes/get-started-with-kubernetes-monitoring#disable-auto).
-	// Enabled by default.
-	// +kubebuilder:validation:Optional
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Automatically update Agent",order=13,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
-	AutoUpdate *bool `json:"autoUpdate"`
-
-	// Use a specific OneAgent version. Defaults to the latest version from the Dynatrace cluster.
+	// The OneAgent version to be used.
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="OneAgent version",order=11,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
 	Version string `json:"version,omitempty"`
 
-	// Use a custom OneAgent image. Defaults to the latest image from the Dynatrace cluster.
+	// Use a custom OneAgent Docker image. Defaults to the image from the Dynatrace cluster.
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Image",order=12,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
 	Image string `json:"image,omitempty"`
@@ -111,16 +105,27 @@ type HostInjectSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="OneAgent installer arguments",order=21,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:hidden"}
 	// +listType=set
 	Args []string `json:"args,omitempty"`
+
+	// Disables automatic restarts of OneAgent pods in case a new version is available (https://www.dynatrace.com/support/help/setup-and-configuration/setup-on-container-platforms/kubernetes/get-started-with-kubernetes-monitoring#disable-auto).
+	// Enabled by default.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Automatically update Agent",order=13,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
+	AutoUpdate bool `json:"autoUpdate"`
 }
 
 type ApplicationMonitoringSpec struct {
-
-	// Use a specific OneAgent CodeModule version. Defaults to the latest version from the Dynatrace cluster.
+	// The OneAgent version to be used.
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="OneAgent version",order=11,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
 	Version string `json:"version,omitempty"`
 
 	AppInjectionSpec `json:",inline"`
+
+	// Set if you want to use the CSIDriver. Don't enable it if you do not have access to Kubernetes nodes or if you lack privileges.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	UseCSIDriver bool `json:"useCSIDriver,omitempty"`
 }
 
 type AppInjectionSpec struct {
@@ -130,7 +135,7 @@ type AppInjectionSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Resource Requirements",order=15,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
 	InitResources *corev1.ResourceRequirements `json:"initResources,omitempty"`
 
-	// Use a custom OneAgent CodeModule image to download binaries.
+	// The OneAgent image that is used to inject into Pods.
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="CodeModulesImage",order=12,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
 	CodeModulesImage string `json:"codeModulesImage,omitempty"`

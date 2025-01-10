@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 func TestReconcile(t *testing.T) {
@@ -21,7 +20,7 @@ func TestReconcile(t *testing.T) {
 		clt.On("GetMonitoredEntitiesForKubeSystemUUID", mock.AnythingOfType("context.backgroundCtx"), "kube-system-uuid").Return([]dtclient.MonitoredEntity{{EntityId: "KUBERNETES_CLUSTER-0E30FE4BF2007587", DisplayName: "operator test entity 1", LastSeenTms: 1639483869085}}, nil)
 
 		dk := createDynaKube()
-		dk.Spec.MetadataEnrichment.Enabled = ptr.To(false)
+		dk.Spec.MetadataEnrichment.Enabled = false
 
 		reconciler := NewReconciler(clt, &dk)
 
@@ -65,8 +64,9 @@ func createDynaKube() dynakube.DynaKube {
 			Name: "test-dk",
 		},
 		Spec: dynakube.DynaKubeSpec{
+			DynatraceApiRequestThreshold: dynakube.DefaultMinRequestThresholdMinutes,
 			MetadataEnrichment: dynakube.MetadataEnrichment{
-				Enabled: ptr.To(true),
+				Enabled: true,
 			},
 		},
 		Status: dynakube.DynaKubeStatus{

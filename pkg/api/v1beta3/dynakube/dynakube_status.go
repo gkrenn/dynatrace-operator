@@ -8,7 +8,6 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/shared/communication"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/status"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/activegate"
-	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/kspm"
 	containerv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,9 +30,6 @@ type DynaKubeStatus struct { //nolint:revive
 
 	// Observed state of Metadata-Enrichment
 	MetadataEnrichment MetadataEnrichmentStatus `json:"metadataEnrichment,omitempty"`
-
-	// Observed state of Kspm
-	Kspm kspm.Status `json:"kspm,omitempty"`
 
 	// UpdatedTimestamp indicates when the instance was last updated
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true

@@ -244,7 +244,9 @@ func TestExtensionControllerRequiresActiveGate(t *testing.T) {
 			},
 			Spec: dynakube.DynaKubeSpec{
 				ActiveGate: activegate.Spec{Capabilities: []activegate.CapabilityDisplayName{}},
-				Extensions: nil,
+				Extensions: dynakube.ExtensionsSpec{
+					Enabled: false,
+				},
 			},
 		}
 
@@ -273,7 +275,9 @@ func TestExtensionControllerRequiresActiveGate(t *testing.T) {
 				Name:      testName,
 			},
 			Spec: dynakube.DynaKubeSpec{
-				Extensions: &dynakube.ExtensionsSpec{},
+				Extensions: dynakube.ExtensionsSpec{
+					Enabled: true,
+				},
 			},
 		}
 
@@ -304,7 +308,9 @@ func TestExtensionControllerRequiresActiveGate(t *testing.T) {
 			},
 			Spec: dynakube.DynaKubeSpec{
 				ActiveGate: activegate.Spec{Capabilities: []activegate.CapabilityDisplayName{}},
-				Extensions: &dynakube.ExtensionsSpec{},
+				Extensions: dynakube.ExtensionsSpec{
+					Enabled: true,
+				},
 			},
 		}
 
@@ -335,7 +341,9 @@ func TestExtensionControllerRequiresActiveGate(t *testing.T) {
 			},
 			Spec: dynakube.DynaKubeSpec{
 				ActiveGate: activegate.Spec{Capabilities: []activegate.CapabilityDisplayName{activegate.KubeMonCapability.DisplayName}},
-				Extensions: &dynakube.ExtensionsSpec{},
+				Extensions: dynakube.ExtensionsSpec{
+					Enabled: true,
+				},
 			},
 		}
 
@@ -366,7 +374,9 @@ func TestExtensionControllerRequiresActiveGate(t *testing.T) {
 			},
 			Spec: dynakube.DynaKubeSpec{
 				ActiveGate: activegate.Spec{Capabilities: []activegate.CapabilityDisplayName{activegate.KubeMonCapability.DisplayName}},
-				Extensions: &dynakube.ExtensionsSpec{},
+				Extensions: dynakube.ExtensionsSpec{
+					Enabled: true,
+				},
 			},
 		}
 
@@ -406,7 +416,7 @@ func TestExtensionControllerRequiresActiveGate(t *testing.T) {
 		require.NoError(t, err)
 
 		// disable extensions
-		r.dk.Spec.Extensions = nil
+		r.dk.Spec.Extensions.Enabled = false
 		r.connectionReconciler = createGenericReconcilerMock(t)
 		r.versionReconciler = createVersionReconcilerMock(t)
 		r.pullSecretReconciler = createGenericReconcilerMock(t)
@@ -435,24 +445,19 @@ func TestServiceCreation(t *testing.T) {
 		},
 	}
 
-	t.Run("service exposes all ports for every capabilities", func(t *testing.T) {
+	t.Run("service exposes correct ports for single capabilities", func(t *testing.T) {
 		expectedCapabilityPorts := map[activegate.CapabilityDisplayName][]string{
 			activegate.RoutingCapability.DisplayName: {
-				consts.HttpServicePortName,
 				consts.HttpsServicePortName,
 			},
 			activegate.MetricsIngestCapability.DisplayName: {
-				consts.HttpServicePortName,
 				consts.HttpsServicePortName,
+				consts.HttpServicePortName,
 			},
 			activegate.DynatraceApiCapability.DisplayName: {
-				consts.HttpServicePortName,
 				consts.HttpsServicePortName,
 			},
-			activegate.KubeMonCapability.DisplayName: {
-				consts.HttpServicePortName,
-				consts.HttpsServicePortName,
-			},
+			activegate.KubeMonCapability.DisplayName: {},
 		}
 
 		for capName, expectedPorts := range expectedCapabilityPorts {
@@ -481,6 +486,28 @@ func TestServiceCreation(t *testing.T) {
 			activegateService := getTestActiveGateService(t, fakeClient)
 			assertContainsAllPorts(t, expectedPorts, activegateService.Spec.Ports)
 		}
+	})
+
+	t.Run("service exposes correct ports for multiple capabilities", func(t *testing.T) {
+		fakeClient := fake.NewClient(testKubeSystemNamespace)
+
+		reconciler := NewReconciler(fakeClient, fakeClient, dk, dynatraceClient, nil, nil).(*Reconciler)
+		reconciler.connectionReconciler = createGenericReconcilerMock(t)
+		reconciler.versionReconciler = createVersionReconcilerMock(t)
+		reconciler.pullSecretReconciler = createGenericReconcilerMock(t)
+
+		dk.Spec.ActiveGate.Capabilities = []activegate.CapabilityDisplayName{
+			activegate.RoutingCapability.DisplayName,
+		}
+		expectedPorts := []string{
+			consts.HttpsServicePortName,
+		}
+
+		err := reconciler.Reconcile(context.Background())
+		require.NoError(t, err)
+
+		activegateService := getTestActiveGateService(t, fakeClient)
+		assertContainsAllPorts(t, expectedPorts, activegateService.Spec.Ports)
 	})
 }
 

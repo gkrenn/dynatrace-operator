@@ -94,7 +94,7 @@ spec:
         {{- end }}
         args:
         - csi-server
-        - --endpoint=unix:/csi/csi.sock
+        - --endpoint=unix://csi/csi.sock
         - --node-id=$(KUBE_NODE_NAME)
         env:
         - name: POD_NAMESPACE
@@ -109,7 +109,7 @@ spec:
               fieldPath: spec.nodeName
         {{- if not .Values.debug }}
         livenessProbe:
-          failureThreshold: 5
+          failureThreshold: 3
           httpGet:
             path: /healthz
             port: healthz
@@ -117,7 +117,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
           successThreshold: 1
-          timeoutSeconds: 4
+          timeoutSeconds: 1
         {{- end }}
         ports:
         - containerPort: 9808
@@ -170,9 +170,6 @@ spec:
           - name: MAX_UNMOUNTED_VOLUME_AGE
             value: "{{ .Values.csidriver.maxUnmountedVolumeAge}}"
           {{- end }}
-        envFrom:
-          - configMapRef:
-              name: install-config
         {{- include "dynatrace-operator.startupProbe" . | nindent 8 }}
         {{- if not .Values.debug }}
         livenessProbe:
@@ -242,7 +239,6 @@ spec:
         args:
         - --csi-address=/csi/csi.sock
         - --health-port=9808
-        - --probe-timeout=4s
         command:
         - livenessprobe
         resources:

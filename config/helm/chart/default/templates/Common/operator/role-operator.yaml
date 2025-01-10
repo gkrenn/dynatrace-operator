@@ -28,13 +28,12 @@ rules:
       - get
       - list
       - watch
-      - update
   - apiGroups:
       - dynatrace.com
     resources:
       - dynakubes/finalizers
-      - edgeconnects/finalizers
       - dynakubes/status
+      - edgeconnects/finalizers
       - edgeconnects/status
     verbs:
       - update
@@ -127,6 +126,12 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods/log
+    verbs:
+      - get
   - apiGroups:
       - networking.istio.io
     resources:

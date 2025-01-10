@@ -8,7 +8,6 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/activegate"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/kspm"
-	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/logmonitoring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -54,7 +53,8 @@ type DynaKube struct {
 
 	Status            DynaKubeStatus `json:"status,omitempty"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              DynaKubeSpec `json:"spec,omitempty"`
+
+	Spec DynaKubeSpec `json:"spec,omitempty"`
 }
 
 // DynaKubeSpec defines the desired state of DynaKube
@@ -62,34 +62,11 @@ type DynaKube struct {
 type DynaKubeSpec struct { //nolint:revive
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 
-	// Configuration for Metadata Enrichment.
-	// +kubebuilder:validation:Optional
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Metadata Enrichment",order=9,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced"}
-	MetadataEnrichment MetadataEnrichment `json:"metadataEnrichment,omitempty"`
-
 	// Set custom proxy settings either directly or from a secret with the field proxy.
 	// Note: Applies to Dynatrace Operator, ActiveGate, and OneAgents.
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Proxy",order=3,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	Proxy *value.Source `json:"proxy,omitempty"`
-
-	// General configuration about the LogMonitoring feature.
-	// +kubebuilder:validation:Optional
-	LogMonitoring *logmonitoring.Spec `json:"logMonitoring,omitempty"`
-
-	// General configuration about the KSPM feature.
-	// +kubebuilder:validation:Optional
-	Kspm *kspm.Spec `json:"kspm,omitempty"`
-
-	// Configuration for thresholding Dynatrace API requests.
-	// +kubebuilder:validation:Optional
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Dynatrace API Request Threshold",order=9,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced"}
-	DynatraceApiRequestThreshold *uint16 `json:"dynatraceApiRequestThreshold,omitempty"`
-
-	// When an (empty) ExtensionsSpec is provided, the extensions related components (extensions controller and extensions collector)
-	// are deployed by the operator.
-	// +kubebuilder:validation:Optional
-	Extensions *ExtensionsSpec `json:"extensions,omitempty"`
 
 	// General configuration about OneAgent instances.
 	// You can't enable more than one module (classicFullStack, cloudNativeFullStack, hostMonitoring, or applicationMonitoring).
@@ -99,6 +76,7 @@ type DynaKubeSpec struct { //nolint:revive
 	// Dynatrace apiUrl, including the /api path at the end. For SaaS, set YOUR_ENVIRONMENT_ID to your environment ID. For Managed, change the apiUrl address.
 	// For instructions on how to determine the environment ID and how to configure the apiUrl address, see Environment ID (https://www.dynatrace.com/support/help/get-started/monitoring-environment/environment-id).
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="APIURL is immutable, please delete the CR and then apply new one"
 	// +kubebuilder:validation:MaxLength=128
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="API URL",order=1,xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	APIURL string `json:"apiUrl"`
@@ -129,9 +107,20 @@ type DynaKubeSpec struct { //nolint:revive
 	// +kubebuilder:validation:Optional
 	Templates TemplatesSpec `json:"templates,omitempty"`
 
+	// Configuration for Metadata Enrichment.
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Metadata Enrichment",order=9,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced"}
+	MetadataEnrichment MetadataEnrichment `json:"metadataEnrichment,omitempty"`
+
 	// General configuration about ActiveGate instances.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="ActiveGate",xDescriptors="urn:alm:descriptor:com.tectonic.ui:text"
 	ActiveGate activegate.Spec `json:"activeGate,omitempty"`
+
+	// Configuration for thresholding Dynatrace API requests.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=15
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Dynatrace API Request Threshold",order=9,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced"}
+	DynatraceApiRequestThreshold int `json:"dynatraceApiRequestThreshold,omitempty"`
 
 	// Disable certificate check for the connection between Dynatrace Operator and the Dynatrace Cluster.
 	// Set to true if you want to skip certification validation checks.
@@ -145,18 +134,29 @@ type DynaKubeSpec struct { //nolint:revive
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Enable Istio automatic management",order=9,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	EnableIstio bool `json:"enableIstio,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	Extensions ExtensionsSpec `json:"extensions,omitempty"`
+
+	// General configuration about the LogModule feature.
+	// +kubebuilder:validation:Optional
+	LogModule LogModuleSpec `json:"logModule,omitempty"`
+
+	// General configuration about the KSPM feature.
+	// +kubebuilder:validation:Optional
+	Kspm kspm.Spec `json:"kspm,omitempty"`
 }
 
 type TemplatesSpec struct {
-	// Low-level configuration options for the LogMonitoring feature.
-	// +kubebuilder:validation:Optional
-	LogMonitoring *logmonitoring.TemplateSpec `json:"logMonitoring,omitempty"`
 	// +kubebuilder:validation:Optional
 	KspmNodeConfigurationCollector kspm.NodeConfigurationCollectorSpec `json:"kspmNodeConfigurationCollector,omitempty"`
 	// +kubebuilder:validation:Optional
-	OpenTelemetryCollector OpenTelemetryCollectorSpec `json:"openTelemetryCollector,omitempty"`
-	// +kubebuilder:validation:Optional
 	ExtensionExecutionController ExtensionExecutionControllerSpec `json:"extensionExecutionController,omitempty"`
+	// Low-level configuration options for the LogModule feature.
+	// +kubebuilder:validation:Optional
+	LogModule LogModuleTemplateSpec `json:"logModule,omitempty"`
+	// +kubebuilder:validation:Optional
+	OpenTelemetryCollector OpenTelemetryCollectorSpec `json:"openTelemetryCollector,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

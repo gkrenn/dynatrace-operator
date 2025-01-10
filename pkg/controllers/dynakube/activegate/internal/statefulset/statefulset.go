@@ -3,23 +3,24 @@ package statefulset
 import (
 	"strconv"
 
-	"github.com/Dynatrace/dynatrace-operator/pkg/api/status"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/activegate/capability"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/activegate/consts"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/activegate/internal/statefulset/builder"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/activegate/internal/statefulset/builder/modifiers"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/deploymentmetadata"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/address"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/hasher"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/labels"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/node"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/prioritymap"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 )
 
 const defaultEnvPriority = prioritymap.DefaultPriority
@@ -52,6 +53,10 @@ func (statefulSetBuilder Builder) CreateStatefulSet(mods []builder.Modifier) (*a
 
 	sts, _ := activeGateBuilder.AddModifier(mods...).Build()
 
+	if err := setHash(&sts); err != nil {
+		return nil, err
+	}
+
 	return &sts, nil
 }
 
@@ -82,7 +87,7 @@ func (statefulSetBuilder Builder) getBaseObjectMeta() metav1.ObjectMeta {
 
 func (statefulSetBuilder Builder) getBaseSpec() appsv1.StatefulSetSpec {
 	return appsv1.StatefulSetSpec{
-		Replicas:            statefulSetBuilder.capability.Properties().Replicas,
+		Replicas:            &statefulSetBuilder.capability.Properties().Replicas,
 		PodManagementPolicy: appsv1.ParallelPodManagement,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -117,7 +122,7 @@ func (statefulSetBuilder Builder) addTemplateSpec(sts *appsv1.StatefulSet) {
 		Containers:         statefulSetBuilder.buildBaseContainer(),
 		NodeSelector:       statefulSetBuilder.capability.Properties().NodeSelector,
 		ServiceAccountName: statefulSetBuilder.dynakube.ActiveGate().GetServiceAccountName(),
-		Affinity:           statefulSetBuilder.nodeAffinity(),
+		Affinity:           nodeAffinity(),
 		Tolerations:        statefulSetBuilder.capability.Properties().Tolerations,
 		SecurityContext: &corev1.PodSecurityContext{
 			SeccompProfile: &corev1.SeccompProfile{
@@ -201,7 +206,7 @@ func (statefulSetBuilder Builder) buildCommonEnvs() []corev1.EnvVar {
 					Name: deploymentmetadata.GetDeploymentMetadataConfigMapName(statefulSetBuilder.dynakube.Name),
 				},
 				Key:      deploymentmetadata.ActiveGateMetadataKey,
-				Optional: ptr.To(false),
+				Optional: address.Of(false),
 			},
 		}},
 	})
@@ -223,13 +228,27 @@ func (statefulSetBuilder Builder) buildCommonEnvs() []corev1.EnvVar {
 	return statefulSetBuilder.envMap.AsEnvVars()
 }
 
-func (statefulSetBuilder Builder) nodeAffinity() *corev1.Affinity {
-	var affinity corev1.Affinity
-	if statefulSetBuilder.dynakube.Status.ActiveGate.Source == status.TenantRegistryVersionSource || statefulSetBuilder.dynakube.Status.ActiveGate.Source == status.CustomVersionVersionSource {
-		affinity = node.AMDOnlyAffinity()
-	} else {
-		affinity = node.Affinity()
+func nodeAffinity() *corev1.Affinity {
+	return &corev1.Affinity{
+		NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: []corev1.NodeSelectorTerm{
+					{
+						MatchExpressions: node.AffinityNodeRequirementForSupportedArches(),
+					},
+				},
+			},
+		},
+	}
+}
+
+func setHash(sts *appsv1.StatefulSet) error {
+	hash, err := hasher.GenerateHash(sts)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
-	return &affinity
+	sts.ObjectMeta.Annotations[hasher.AnnotationHash] = hash
+
+	return nil
 }

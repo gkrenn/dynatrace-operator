@@ -63,13 +63,12 @@ type dependencies struct {
 }
 
 func (d dependencies) Any() bool {
-	return d.extensions // kspm is a dependency too, but blocked by validation webhook to not run standalone
+	return d.extensions
 }
 
 // +kubebuilder:object:generate=true
 
 type Spec struct {
-	CapabilityProperties `json:",inline"`
 
 	// Adds additional annotations to the ActiveGate pods
 	// +kubebuilder:validation:Optional
@@ -100,6 +99,8 @@ type Spec struct {
 	// Activegate capabilities enabled (routing, kubernetes-monitoring, metrics-ingest, dynatrace-api)
 	Capabilities []CapabilityDisplayName `json:"capabilities,omitempty"`
 
+	CapabilityProperties `json:",inline"`
+
 	enabledDependencies dependencies
 }
 
@@ -124,11 +125,6 @@ type CapabilityProperties struct {
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Labels",order=37,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
 	Labels map[string]string `json:"labels,omitempty"`
-
-	// Amount of replicas for your ActiveGates
-	// +kubebuilder:validation:Optional
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Replicas",order=30,xDescriptors="urn:alm:descriptor:com.tectonic.ui:podCount"
-	Replicas *int32 `json:"replicas,omitempty"`
 
 	// The ActiveGate container image. Defaults to the latest ActiveGate image provided by the registry on the tenant
 	// +kubebuilder:validation:Optional
@@ -162,4 +158,9 @@ type CapabilityProperties struct {
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="topologySpreadConstraints",order=40,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:hidden"}
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+	// Amount of replicas for your ActiveGates
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=1
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Replicas",order=30,xDescriptors="urn:alm:descriptor:com.tectonic.ui:podCount"
+	Replicas int32 `json:"replicas,omitempty"`
 }

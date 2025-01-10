@@ -5,9 +5,7 @@ import (
 	"testing"
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/scheme/fake"
-	"github.com/Dynatrace/dynatrace-operator/pkg/api/shared/communication"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/shared/value"
-	"github.com/Dynatrace/dynatrace-operator/pkg/api/status"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/activegate"
 	"github.com/Dynatrace/dynatrace-operator/pkg/consts"
@@ -183,8 +181,8 @@ func TestMutate(t *testing.T) {
 	}
 }
 
-func TestNoInjectionMutate(t *testing.T) {
-	dk := getTestNoInjectionDynakube()
+func TestNoCommunicationHostsMutate(t *testing.T) {
+	dk := getTestNoCommunicationHostDynakube()
 
 	mutator := createTestPodMutator([]client.Object{getTestInitSecret()})
 	request := createTestMutationRequest(dk, nil, getTestNamespace(nil))
@@ -210,9 +208,7 @@ func TestNoInjectionMutate(t *testing.T) {
 	require.Contains(t, request.Pod.Annotations, dtwebhook.AnnotationOneAgentReason)
 
 	assert.Equal(t, "false", request.Pod.Annotations[dtwebhook.AnnotationOneAgentInjected])
-	assert.Contains(t, request.Pod.Annotations[dtwebhook.AnnotationOneAgentReason], EmptyConnectionInfoReason)
-	assert.Contains(t, request.Pod.Annotations[dtwebhook.AnnotationOneAgentReason], EmptyTenantUUIDReason)
-	assert.Contains(t, request.Pod.Annotations[dtwebhook.AnnotationOneAgentReason], UnknownCodeModuleReason)
+	assert.Equal(t, dtwebhook.EmptyConnectionInfoReason, request.Pod.Annotations[dtwebhook.AnnotationOneAgentReason])
 
 	assert.Empty(t, request.InstallContainer.Env)
 	assert.Empty(t, request.InstallContainer.VolumeMounts)
@@ -285,90 +281,6 @@ func TestReinvoke(t *testing.T) {
 	})
 }
 
-func TestIsInjectionPossible(t *testing.T) {
-	t.Run("possible with valid tenant UUID", injectionPossibleWithValidTenantUUID)
-	t.Run("possible without code modules version but with image", injectionPossibleWithCodeModulesImage)
-	t.Run("not possible without tenant UUID", injectionNotPossibleWithoutTenantUUID)
-	t.Run("not possible without communication route", injectionNotPossibleWithoutCommunicationRoute)
-	t.Run("not possible without code modules version", injectionNotPossibleWithoutCodeModulesVersion)
-	t.Run("not possible with multiple issues", injectionNotPossibleWithMultipleIssues)
-}
-
-func injectionPossibleWithValidTenantUUID(t *testing.T) {
-	mutator := createTestPodMutator(nil)
-	request := createTestMutationRequest(getTestDynakube(), nil, getTestNamespace(nil))
-
-	ok, reason := mutator.isInjectionPossible(request)
-
-	require.True(t, ok)
-	require.Empty(t, reason)
-}
-
-func injectionPossibleWithCodeModulesImage(t *testing.T) {
-	mutator := createTestPodMutator(nil)
-	dk := getTestDynakube()
-	dk.Status.CodeModules.VersionStatus.Version = ""
-	dk.Status.CodeModules.VersionStatus.ImageID = "test-image-id"
-	request := createTestMutationRequest(dk, nil, getTestNamespace(nil))
-
-	ok, reason := mutator.isInjectionPossible(request)
-
-	require.True(t, ok)
-	require.Empty(t, reason)
-}
-
-func injectionNotPossibleWithoutTenantUUID(t *testing.T) {
-	mutator := createTestPodMutator(nil)
-	dk := getTestDynakube()
-	dk.Status.OneAgent.ConnectionInfoStatus.TenantUUID = ""
-	request := createTestMutationRequest(dk, nil, getTestNamespace(nil))
-
-	ok, reason := mutator.isInjectionPossible(request)
-
-	require.False(t, ok)
-	require.Contains(t, reason, EmptyTenantUUIDReason)
-}
-
-func injectionNotPossibleWithoutCommunicationRoute(t *testing.T) {
-	mutator := createTestPodMutator(nil)
-	dk := getTestDynakube()
-	dk.Status.OneAgent.ConnectionInfoStatus.CommunicationHosts = []dynakube.CommunicationHostStatus{}
-	request := createTestMutationRequest(dk, nil, getTestNamespace(nil))
-
-	ok, reason := mutator.isInjectionPossible(request)
-
-	require.False(t, ok)
-	require.Contains(t, reason, EmptyConnectionInfoReason)
-}
-
-func injectionNotPossibleWithoutCodeModulesVersion(t *testing.T) {
-	mutator := createTestPodMutator(nil)
-	dk := getTestDynakube()
-	dk.Status.CodeModules.VersionStatus.Version = ""
-	request := createTestMutationRequest(dk, nil, getTestNamespace(nil))
-
-	ok, reason := mutator.isInjectionPossible(request)
-
-	require.False(t, ok)
-	require.Contains(t, reason, UnknownCodeModuleReason)
-}
-
-func injectionNotPossibleWithMultipleIssues(t *testing.T) {
-	mutator := createTestPodMutator(nil)
-	dk := getTestDynakube()
-	dk.Status.OneAgent.ConnectionInfoStatus.TenantUUID = ""
-	dk.Status.OneAgent.ConnectionInfoStatus.CommunicationHosts = []dynakube.CommunicationHostStatus{}
-	dk.Status.CodeModules.VersionStatus.Version = ""
-	request := createTestMutationRequest(dk, nil, getTestNamespace(nil))
-
-	ok, reason := mutator.isInjectionPossible(request)
-
-	require.False(t, ok)
-	require.Contains(t, reason, EmptyTenantUUIDReason)
-	require.Contains(t, reason, EmptyConnectionInfoReason)
-	require.Contains(t, reason, UnknownCodeModuleReason)
-}
-
 func createTestPodMutator(objects []client.Object) *Mutator {
 	return &Mutator{
 		client:           fake.NewClient(objects...),
@@ -431,7 +343,7 @@ func getTestCSIDynakube() *dynakube.DynaKube {
 				CloudNativeFullStack: &dynakube.CloudNativeFullStackSpec{},
 			},
 		},
-		Status: getTestDynakubeStatus(),
+		Status: getTestDynakubeCommunicationHostStatus(),
 	}
 }
 
@@ -442,11 +354,9 @@ func getTestReadOnlyCSIDynakube() *dynakube.DynaKube {
 	return dk
 }
 
-func getTestNoInjectionDynakube() *dynakube.DynaKube {
+func getTestNoCommunicationHostDynakube() *dynakube.DynaKube {
 	dk := getTestCSIDynakube()
 	dk.Status.OneAgent.ConnectionInfoStatus.CommunicationHosts = []dynakube.CommunicationHostStatus{}
-	dk.Status.CodeModules.VersionStatus.Version = ""
-	dk.Status.OneAgent.ConnectionInfoStatus.TenantUUID = ""
 
 	return dk
 }
@@ -459,7 +369,7 @@ func getTestDynakube() *dynakube.DynaKube {
 				ApplicationMonitoring: &dynakube.ApplicationMonitoringSpec{},
 			},
 		},
-		Status: getTestDynakubeStatus(),
+		Status: getTestDynakubeCommunicationHostStatus(),
 	}
 }
 
@@ -471,20 +381,17 @@ func getTestDynakubeWithContainerExclusion() *dynakube.DynaKube {
 				ApplicationMonitoring: &dynakube.ApplicationMonitoringSpec{},
 			},
 		},
-		Status: getTestDynakubeStatus(),
+		Status: getTestDynakubeCommunicationHostStatus(),
 	}
 	dk.ObjectMeta.Annotations[dtwebhook.AnnotationContainerInjection+"/sidecar-container"] = "false"
 
 	return dk
 }
 
-func getTestDynakubeStatus() dynakube.DynaKubeStatus {
+func getTestDynakubeCommunicationHostStatus() dynakube.DynaKubeStatus {
 	return dynakube.DynaKubeStatus{
 		OneAgent: dynakube.OneAgentStatus{
 			ConnectionInfoStatus: dynakube.OneAgentConnectionInfoStatus{
-				ConnectionInfo: communication.ConnectionInfo{
-					TenantUUID: "test-tenant-uuid",
-				},
 				CommunicationHosts: []dynakube.CommunicationHostStatus{
 					{
 						Protocol: "http",
@@ -492,11 +399,6 @@ func getTestDynakubeStatus() dynakube.DynaKubeStatus {
 						Port:     666,
 					},
 				},
-			},
-		},
-		CodeModules: dynakube.CodeModulesStatus{
-			VersionStatus: status.VersionStatus{
-				Version: "test-version",
 			},
 		},
 	}

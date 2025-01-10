@@ -16,7 +16,6 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/edgeconnect/secret"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/edgeconnect/version"
 	"github.com/Dynatrace/dynatrace-operator/pkg/oci/registry"
-	"github.com/Dynatrace/dynatrace-operator/pkg/util/conditions"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/dttoken"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/hasher"
 	k8sdeployment "github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/deployment"
@@ -379,6 +378,15 @@ func (controller *Controller) reconcileEdgeConnectRegular(ctx context.Context, e
 
 	desiredDeployment.Spec.Template.Annotations = map[string]string{consts.EdgeConnectAnnotationSecretHash: secretHash}
 
+	ddHash, err := hasher.GenerateHash(desiredDeployment)
+	if err != nil {
+		_log.Debug("Unable to generate hash for EdgeConnect deployment")
+
+		return err
+	}
+
+	desiredDeployment.Annotations[hasher.AnnotationHash] = ddHash
+
 	_, err = k8sdeployment.Query(controller.client, controller.apiReader, log).WithOwner(ec).CreateOrUpdate(ctx, desiredDeployment)
 	if err != nil {
 		_log.Info("could not create or update deployment for EdgeConnect")
@@ -683,6 +691,15 @@ func (controller *Controller) createOrUpdateEdgeConnectDeploymentAndSettings(ctx
 		return errors.WithStack(err)
 	}
 
+	ddHash, err := hasher.GenerateHash(desiredDeployment)
+	if err != nil {
+		_log.Debug("EdgeConnect hash generation failed")
+
+		return err
+	}
+
+	desiredDeployment.Annotations[hasher.AnnotationHash] = ddHash
+
 	_, err = k8sdeployment.Query(controller.client, controller.apiReader, _log).WithOwner(ec).CreateOrUpdate(ctx, desiredDeployment)
 	if err != nil {
 		_log.Debug("could not create or update deployment for EdgeConnect")
@@ -770,23 +787,17 @@ func (controller *Controller) createOrUpdateEdgeConnectConfigSecret(ctx context.
 
 			newToken, err := dttoken.New("dt0e01")
 			if err != nil {
-				conditions.SetSecretGenFailed(ec.Conditions(), consts.SecretConfigConditionType, err)
-
 				return "", "", err
 			}
 
 			token = newToken.String()
 		} else {
-			conditions.SetSecretGenFailed(ec.Conditions(), consts.SecretConfigConditionType, err)
-
 			return "", "", err
 		}
 	}
 
 	configFile, err := secret.PrepareConfigFile(ctx, ec, controller.apiReader, token)
 	if err != nil {
-		conditions.SetSecretGenFailed(ec.Conditions(), consts.SecretConfigConditionType, err)
-
 		return "", "", err
 	}
 
@@ -799,8 +810,6 @@ func (controller *Controller) createOrUpdateEdgeConnectConfigSecret(ctx context.
 	)
 
 	if err != nil {
-		conditions.SetSecretGenFailed(ec.Conditions(), consts.SecretConfigConditionType, err)
-
 		return "", "", errors.WithStack(err)
 	}
 
@@ -809,17 +818,11 @@ func (controller *Controller) createOrUpdateEdgeConnectConfigSecret(ctx context.
 	_, err = query.CreateOrUpdate(ctx, secretConfig)
 	if err != nil {
 		log.Info("could not create or update secret for ec.yaml", "name", secretConfig.Name)
-		conditions.SetKubeApiError(ec.Conditions(), consts.SecretConfigConditionType, err)
 
 		return "", "", err
 	}
 
-	conditions.SetSecretCreated(ec.Conditions(), consts.SecretConfigConditionType, secretConfig.Name)
-
 	hash, err = hasher.GenerateHash(secretConfig.Data)
-	if err != nil {
-		conditions.SetSecretGenFailed(ec.Conditions(), consts.SecretConfigConditionType, err)
-	}
 
 	return token, hash, err
 }

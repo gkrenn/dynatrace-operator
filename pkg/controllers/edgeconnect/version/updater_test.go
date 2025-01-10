@@ -3,6 +3,7 @@ package version
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 const fakeDigest = "sha256:7173b809ca12ec5dee4506cd86be934c4596dd234ee82c0662eac04a8c2c71dc"
@@ -48,7 +48,7 @@ func TestUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		// digest should not have been updated due to probe timestamp
-		require.Contains(t, edgeConnect.Status.Version.ImageID, fakeDigest)
+		require.True(t, strings.Contains(edgeConnect.Status.Version.ImageID, fakeDigest))
 	})
 
 	t.Run("custom tag used => registry still used", func(t *testing.T) {
@@ -121,7 +121,7 @@ func TestReconcileRequired(t *testing.T) {
 
 		edgeConnectTime := metav1.Now()
 		edgeConnect.Status.Version.LastProbeTimestamp = &edgeConnectTime
-		edgeConnect.Spec.AutoUpdate = ptr.To(true)
+		edgeConnect.Spec.AutoUpdate = true
 		edgeConnect.Status.Version.ImageID = edgeConnect.Image()
 
 		assert.False(t, updater.RequiresReconcile())
@@ -133,7 +133,7 @@ func TestReconcileRequired(t *testing.T) {
 
 		edgeConnectTime := metav1.NewTime(currentTime.Now().Add(-time.Hour))
 		edgeConnect.Status.Version.LastProbeTimestamp = &edgeConnectTime
-		edgeConnect.Spec.AutoUpdate = ptr.To(true)
+		edgeConnect.Spec.AutoUpdate = true
 		edgeConnect.Status.Version.ImageID = edgeConnect.Image()
 
 		assert.True(t, updater.RequiresReconcile())

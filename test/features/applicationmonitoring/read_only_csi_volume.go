@@ -33,7 +33,9 @@ func ReadOnlyCSIVolume(t *testing.T) features.Feature {
 	testDynakube := *dynakubeComponents.New(
 		dynakubeComponents.WithAnnotations(readOnlyInjection),
 		dynakubeComponents.WithApiUrl(secretConfig.ApiUrl),
-		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{}),
+		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{
+			UseCSIDriver: true,
+		}),
 	)
 	sampleDeployment := sample.NewApp(t, &testDynakube, sample.AsDeployment())
 	builder.Assess("install sample deployment namespace", sampleDeployment.InstallNamespace())

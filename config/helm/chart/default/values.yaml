@@ -204,13 +204,12 @@ rbac:
   extensions:
     create: true
     annotations: {}
-  logMonitoring:
+  logModule:
     create: true
     annotations: {}
   oneAgent:
     create: true
     annotations: {}
-  kspm:
+  nodeConfigCollector:
     create: true
     annotations: {}
-  supportability: true

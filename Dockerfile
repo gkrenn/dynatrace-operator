@@ -1,8 +1,5 @@
 # setup build image
-FROM golang:1.23.3@sha256:d56c3e08fe5b27729ee3834854ae8f7015af48fd651cd25d1e3bcf3c19830174 AS operator-build
-
-RUN --mount=type=cache,target=/var/cache/apt \
-    apt-get update && apt-get install -y libbtrfs-dev libdevmapper-dev
+FROM golang:1.23.2@sha256:adee809c2d0009a4199a11a1b2618990b244c6515149fe609e2788ddf164bd10 AS operator-build
 
 WORKDIR /app
 
@@ -19,12 +16,12 @@ ARG GO_BUILD_TAGS
 
 COPY pkg ./pkg
 COPY cmd ./cmd
-RUN --mount=type=cache,target="/root/.cache/go-build" CGO_ENABLED=1 CGO_CFLAGS="-O2 -Wno-return-local-addr" \
+RUN --mount=type=cache,target="/root/.cache/go-build" CGO_ENABLED=0 \
     go build -tags "${GO_BUILD_TAGS}" -trimpath -ldflags="${GO_LINKER_ARGS}" \
     -o ./build/_output/bin/dynatrace-operator ./cmd/
 
-FROM registry.access.redhat.com/ubi9-micro:9.5-1731934928@sha256:31f00ba1d79523e182624c96e05b2f5ca66ea35d64959d84acdc8b670429415f AS base
-FROM registry.access.redhat.com/ubi9:9.5-1732804088@sha256:1057dab827c782abcfb9bda0c3900c0966b5066e671d54976a7bcb3a2d1a5e53 AS dependency
+FROM registry.access.redhat.com/ubi9-micro:9.4-15@sha256:7f376b75faf8ea546f28f8529c37d24adcde33dca4103f4897ae19a43d58192b AS base
+FROM registry.access.redhat.com/ubi9:9.4-1214.1726694543@sha256:b00d5990a00937bd1ef7f44547af6c7fd36e3fd410e2c89b5d2dfc1aff69fe99 AS dependency
 RUN mkdir -p /tmp/rootfs-dependency
 COPY --from=base / /tmp/rootfs-dependency
 RUN dnf install --installroot /tmp/rootfs-dependency \

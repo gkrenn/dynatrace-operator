@@ -1,14 +1,12 @@
 package dynakube
 
 import (
-	"math"
 	"strconv"
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/shared/communication"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/shared/value"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/activegate"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
@@ -68,6 +66,12 @@ func (src *DynaKube) toOneAgentSpec(dst *dynakube.DynaKube) {
 		dst.Spec.OneAgent.ApplicationMonitoring = &dynakube.ApplicationMonitoringSpec{}
 		dst.Spec.OneAgent.ApplicationMonitoring.AppInjectionSpec = *toAppInjectSpec(src.Spec.OneAgent.ApplicationMonitoring.AppInjectionSpec)
 		dst.Spec.OneAgent.ApplicationMonitoring.Version = src.Spec.OneAgent.ApplicationMonitoring.Version
+
+		if src.Spec.OneAgent.ApplicationMonitoring.UseCSIDriver != nil {
+			dst.Spec.OneAgent.ApplicationMonitoring.UseCSIDriver = *src.Spec.OneAgent.ApplicationMonitoring.UseCSIDriver
+		} else {
+			dst.Spec.OneAgent.ApplicationMonitoring.UseCSIDriver = false
+		}
 	}
 }
 
@@ -96,22 +100,35 @@ func (src *DynaKube) toActiveGateSpec(dst *dynakube.DynaKube) {
 		}
 	}
 
-	dst.Spec.ActiveGate.Replicas = src.Spec.ActiveGate.Replicas
+	if src.Spec.ActiveGate.Replicas != nil {
+		dst.Spec.ActiveGate.Replicas = *src.Spec.ActiveGate.Replicas
+	}
 }
 
 func (src *DynaKube) toMovedFields(dst *dynakube.DynaKube) error {
 	if src.Annotations[AnnotationFeatureMetadataEnrichment] == "false" ||
 		!src.NeedAppInjection() {
-		dst.Spec.MetadataEnrichment = dynakube.MetadataEnrichment{Enabled: ptr.To(false)}
+		dst.Spec.MetadataEnrichment = dynakube.MetadataEnrichment{Enabled: false}
 		delete(dst.Annotations, AnnotationFeatureMetadataEnrichment)
 	} else {
-		dst.Spec.MetadataEnrichment = dynakube.MetadataEnrichment{Enabled: ptr.To(true)}
+		dst.Spec.MetadataEnrichment = dynakube.MetadataEnrichment{Enabled: true}
 		delete(dst.Annotations, AnnotationFeatureMetadataEnrichment)
 	}
 
 	src.convertMaxMountAttempts(dst)
 
-	src.convertDynatraceApiRequestThreshold(dst)
+	if src.Annotations[AnnotationFeatureApiRequestThreshold] != "" {
+		duration, err := strconv.ParseInt(src.Annotations[AnnotationFeatureApiRequestThreshold], 10, 32)
+		if err != nil {
+			return err
+		}
+
+		dst.Spec.DynatraceApiRequestThreshold = int(duration)
+		delete(dst.Annotations, AnnotationFeatureApiRequestThreshold)
+	} else {
+		dst.Spec.DynatraceApiRequestThreshold = DefaultMinRequestThresholdMinutes
+		delete(dst.Annotations, AnnotationFeatureApiRequestThreshold)
+	}
 
 	if src.Annotations[AnnotationFeatureOneAgentSecCompProfile] != "" {
 		secCompProfile := src.Annotations[AnnotationFeatureOneAgentSecCompProfile]
@@ -135,28 +152,6 @@ func (src *DynaKube) toMovedFields(dst *dynakube.DynaKube) error {
 		}
 
 		dst.Spec.MetadataEnrichment.NamespaceSelector = src.Spec.NamespaceSelector
-	}
-
-	return nil
-}
-
-func (src *DynaKube) convertDynatraceApiRequestThreshold(dst *dynakube.DynaKube) error {
-	if src.Annotations[AnnotationFeatureApiRequestThreshold] != "" {
-		duration, err := strconv.ParseInt(src.Annotations[AnnotationFeatureApiRequestThreshold], 10, 32)
-		if err != nil {
-			return err
-		}
-
-		if duration >= 0 {
-			if math.MaxUint16 < duration {
-				dst.Spec.DynatraceApiRequestThreshold = ptr.To(uint16(math.MaxUint16))
-			} else {
-				// linting disabled, handled in if
-				dst.Spec.DynatraceApiRequestThreshold = ptr.To(uint16(duration)) //nolint:gosec
-			}
-		}
-
-		delete(dst.Annotations, AnnotationFeatureApiRequestThreshold)
 	}
 
 	return nil
@@ -218,7 +213,12 @@ func (src *DynaKube) toActiveGateStatus(dst *dynakube.DynaKube) {
 
 func toHostInjectSpec(src HostInjectSpec) *dynakube.HostInjectSpec {
 	dst := &dynakube.HostInjectSpec{}
-	dst.AutoUpdate = src.AutoUpdate
+	if src.AutoUpdate != nil {
+		dst.AutoUpdate = *src.AutoUpdate
+	} else {
+		dst.AutoUpdate = true
+	}
+
 	dst.OneAgentResources = src.OneAgentResources
 	dst.Args = src.Args
 	dst.Version = src.Version

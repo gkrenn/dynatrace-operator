@@ -107,9 +107,3 @@ func concatErrors(errs []error) error {
 
 	return errors.New(concatenatedError)
 }
-
-func CheckForDataIngestToken(tokens Tokens) bool {
-	dataIngestToken, hasDataIngestToken := tokens[dtclient.DataIngestToken]
-
-	return hasDataIngestToken && len(dataIngestToken.Value) != 0
-}

@@ -229,6 +229,7 @@ func TestManageStatefulSet(t *testing.T) {
 		err = r.client.Update(ctx, actualStatefulSet)
 
 		require.NoError(t, err)
+
 		err = r.manageStatefulSet(ctx)
 		require.NoError(t, err)
 

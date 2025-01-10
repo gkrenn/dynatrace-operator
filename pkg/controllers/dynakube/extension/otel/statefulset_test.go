@@ -10,6 +10,7 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/consts"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/tls"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/utils"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/address"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/conditions"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/node"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
@@ -20,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -38,8 +38,10 @@ func getTestDynakube() *dynakube.DynaKube {
 			Annotations: map[string]string{},
 		},
 		Spec: dynakube.DynaKubeSpec{
-			Extensions: &dynakube.ExtensionsSpec{},
-			Templates:  dynakube.TemplatesSpec{OpenTelemetryCollector: dynakube.OpenTelemetryCollectorSpec{}},
+			Extensions: dynakube.ExtensionsSpec{
+				Enabled: true,
+			},
+			Templates: dynakube.TemplatesSpec{OpenTelemetryCollector: dynakube.OpenTelemetryCollectorSpec{}},
 		},
 	}
 }
@@ -83,7 +85,7 @@ func getTLSSecret(name string, namespace string, crt string, key string) corev1.
 func TestConditions(t *testing.T) {
 	t.Run("extensions are disabled", func(t *testing.T) {
 		dk := getTestDynakube()
-		dk.Spec.Extensions = nil
+		dk.Spec.Extensions.Enabled = false
 		conditions.SetStatefulSetCreated(dk.Conditions(), otelControllerStatefulSetConditionType, dk.ExtensionsCollectorStatefulsetName())
 
 		mockK8sClient := fake.NewClient(dk)
@@ -268,9 +270,19 @@ func TestAffinity(t *testing.T) {
 		dk := getTestDynakube()
 		statefulSet := getStatefulset(t, dk)
 
-		expectedAffinity := node.Affinity()
+		expectedAffinity := &corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+					NodeSelectorTerms: []corev1.NodeSelectorTerm{
+						{
+							MatchExpressions: node.AffinityNodeRequirementForSupportedArches(),
+						},
+					},
+				},
+			},
+		}
 
-		assert.Equal(t, expectedAffinity, *statefulSet.Spec.Template.Spec.Affinity)
+		assert.Equal(t, expectedAffinity, statefulSet.Spec.Template.Spec.Affinity)
 	})
 }
 
@@ -506,7 +518,7 @@ func TestVolumes(t *testing.T) {
 							Path: consts.OtelcTokenSecretKey,
 						},
 					},
-					DefaultMode: ptr.To(int32(420)),
+					DefaultMode: address.Of(int32(420)),
 				},
 			},
 		}

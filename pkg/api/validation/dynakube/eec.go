@@ -6,8 +6,7 @@ import (
 )
 
 const (
-	errorExtensionExecutionControllerImageNotSpecified       = `DynaKube's specification enables the Prometheus feature, make sure you correctly specify the ExtensionExecutionController image.`
-	errorExtensionExecutionControllerInvalidPVCConfiguration = `DynaKube specifies a PVC for the extension controller while ephemeral volume is also enabled. These settings are mutually exclusive, please choose only one.`
+	errorExtensionExecutionControllerImageNotSpecified = `DynaKube's specification enables the Prometheus feature, make sure you correctly specify the ExtensionExecutionController image.`
 )
 
 func extensionControllerImage(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
@@ -22,22 +21,4 @@ func extensionControllerImage(_ context.Context, _ *Validator, dk *dynakube.Dyna
 	}
 
 	return ""
-}
-
-func extensionControllerPVCStorageDevice(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
-	if !dk.IsExtensionsEnabled() {
-		return ""
-	}
-
-	if extensionControllerMutuallyExclusivePVCSettings(dk) {
-		log.Info("requested dynakube specifies mutually exclusive PersistentVolumeClaim settings for ExtensionExecutionController.", "name", dk.Name, "namespace", dk.Namespace)
-
-		return errorExtensionExecutionControllerInvalidPVCConfiguration
-	}
-
-	return ""
-}
-
-func extensionControllerMutuallyExclusivePVCSettings(dk *dynakube.DynaKube) bool {
-	return dk.Spec.Templates.ExtensionExecutionController.UseEphemeralVolume && dk.Spec.Templates.ExtensionExecutionController.PersistentVolumeClaim != nil
 }

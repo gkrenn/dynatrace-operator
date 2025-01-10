@@ -59,15 +59,6 @@ func (ag *Spec) GetServiceAccountOwner() string {
 	}
 }
 
-func (ag *Spec) GetReplicas() int32 {
-	var defaultReplicas int32 = 1
-	if ag.Replicas == nil {
-		return defaultReplicas
-	}
-
-	return *ag.Replicas
-}
-
 func (ag *Spec) GetServiceAccountName() string {
 	return "dynatrace-" + ag.GetServiceAccountOwner()
 }
@@ -86,6 +77,13 @@ func (ag *Spec) IsApiEnabled() bool {
 
 func (ag *Spec) IsMetricsIngestEnabled() bool {
 	return ag.IsMode(MetricsIngestCapability.DisplayName)
+}
+
+func (ag *Spec) NeedsService() bool {
+	return ag.IsRoutingEnabled() ||
+		ag.IsApiEnabled() ||
+		ag.IsMetricsIngestEnabled() ||
+		ag.enabledDependencies.extensions
 }
 
 func (ag *Spec) HasCaCert() bool {

@@ -181,6 +181,7 @@ func TestReconcile(t *testing.T) {
 	})
 	t.Run("do not update OneAgent connection info within timeout", func(t *testing.T) {
 		dk := getTestDynakube()
+		dk.Spec.DynatraceApiRequestThreshold = dynakube.DefaultMinRequestThresholdMinutes
 		fakeClient := fake.NewClient(dk, buildOneAgentTenantSecret(dk, testOutdated))
 		dtc := dtclientmock.NewClient(t)
 

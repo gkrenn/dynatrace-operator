@@ -79,7 +79,10 @@ func InstallFromImage(t *testing.T) features.Feature {
 
 	appDynakube := *dynakubeComponents.New(
 		dynakubeComponents.WithName("app-codemodules"),
-		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{AppInjectionSpec: *codeModulesAppInjectSpec(t)}),
+		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{
+			AppInjectionSpec: *codeModulesAppInjectSpec(t),
+			UseCSIDriver:     true,
+		}),
 		dynakubeComponents.WithNameBasedOneAgentNamespaceSelector(),
 		dynakubeComponents.WithNameBasedMetadataEnrichmentNamespaceSelector(),
 		dynakubeComponents.WithApiUrl(secretConfigs[1].ApiUrl),

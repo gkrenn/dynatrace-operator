@@ -7,14 +7,13 @@ import (
 	"testing"
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
-	"github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/address"
 	"github.com/Dynatrace/dynatrace-operator/test/helpers"
 	dynakubeComponents "github.com/Dynatrace/dynatrace-operator/test/helpers/components/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/test/helpers/sample"
 	"github.com/Dynatrace/dynatrace-operator/test/helpers/tenant"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 )
@@ -25,7 +24,9 @@ func WithoutCSI(t *testing.T) features.Feature {
 	secretConfig := tenant.GetSingleTenantSecret(t)
 	appOnlyDynakube := *dynakubeComponents.New(
 		dynakubeComponents.WithApiUrl(secretConfig.ApiUrl),
-		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{}),
+		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{
+			UseCSIDriver: false,
+		}),
 	)
 
 	dynakubeComponents.Install(builder, helpers.LevelAssess, &secretConfig, appOnlyDynakube)
@@ -52,8 +53,8 @@ func WithoutCSI(t *testing.T) features.Feature {
 		sample.WithName("random-user"),
 		sample.AsDeployment(),
 		sample.WithSecurityContext(corev1.PodSecurityContext{
-			RunAsUser:  ptr.To[int64](1234),
-			RunAsGroup: ptr.To[int64](1234),
+			RunAsUser:  address.Of[int64](1234),
+			RunAsGroup: address.Of[int64](1234),
 		}),
 	)
 	builder.Assess("install sample app with random users set", randomUserSample.Install())
@@ -77,7 +78,7 @@ func checkInjection(deployment *sample.App) features.Func {
 
 		for _, item := range samplePods.Items {
 			require.NotNil(t, item.Spec.InitContainers)
-			require.Equal(t, webhook.InstallContainerName, item.Spec.InitContainers[0].Name)
+			require.Equal(t, "install-oneagent", item.Spec.InitContainers[0].Name)
 		}
 
 		return ctx

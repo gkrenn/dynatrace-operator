@@ -7,9 +7,11 @@ import (
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/consts"
+	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/hash"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/servicename"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/tls"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/utils"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/address"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/conditions"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/hasher"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/labels"
@@ -19,7 +21,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -95,7 +96,7 @@ func (r *reconciler) createOrUpdateStatefulset(ctx context.Context) error {
 		return err
 	}
 
-	if err := hasher.AddAnnotation(sts); err != nil {
+	if err := hash.SetHash(sts); err != nil {
 		conditions.SetKubeApiError(r.dk.Conditions(), otelControllerStatefulSetConditionType, err)
 
 		return err
@@ -245,7 +246,17 @@ func buildAppLabels(dkName string) *labels.AppLabels {
 func buildAffinity() corev1.Affinity {
 	// TODO: implement new attributes in CR dk.Spec.Templates.OpenTelemetryCollector.Affinity
 	// otherwise to use defaults ones
-	return node.Affinity()
+	return corev1.Affinity{
+		NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: []corev1.NodeSelectorTerm{
+					{
+						MatchExpressions: node.AffinityNodeRequirementForSupportedArches(),
+					},
+				},
+			},
+		},
+	}
 }
 
 func setImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) func(o *appsv1.StatefulSet) {
@@ -268,7 +279,7 @@ func setVolumes(dk *dynakube.DynaKube) func(o *appsv1.StatefulSet) {
 								Path: consts.OtelcTokenSecretKey,
 							},
 						},
-						DefaultMode: ptr.To(int32(420)),
+						DefaultMode: address.Of(int32(420)),
 					},
 				},
 			},

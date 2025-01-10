@@ -6,9 +6,11 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/activegate/capability"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/consts"
+	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/hash"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/servicename"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/tls"
 	"github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/extension/utils"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/address"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/conditions"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/hasher"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/labels"
@@ -18,11 +20,9 @@ import (
 	"golang.org/x/net/context"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -72,8 +72,6 @@ const (
 
 	// misc
 	logVolumeName = "log"
-
-	userGroupId int64 = 1001
 )
 
 func (r *reconciler) createOrUpdateStatefulset(ctx context.Context) error {
@@ -93,7 +91,7 @@ func (r *reconciler) createOrUpdateStatefulset(ctx context.Context) error {
 		statefulset.SetTolerations(r.dk.Spec.Templates.ExtensionExecutionController.Tolerations),
 		statefulset.SetTopologySpreadConstraints(utils.BuildTopologySpreadConstraints(r.dk.Spec.Templates.ExtensionExecutionController.TopologySpreadConstraints, appLabels)),
 		statefulset.SetServiceAccount(serviceAccountName),
-		statefulset.SetSecurityContext(buildPodSecurityContext(r.dk)),
+		statefulset.SetSecurityContext(buildPodSecurityContext()),
 		statefulset.SetUpdateStrategy(utils.BuildUpdateStrategy()),
 		setImagePullSecrets(r.dk.ImagePullSecretReferences()),
 		setVolumes(r.dk),
@@ -106,7 +104,7 @@ func (r *reconciler) createOrUpdateStatefulset(ctx context.Context) error {
 		return err
 	}
 
-	if err := hasher.AddAnnotation(desiredSts); err != nil {
+	if err := hash.SetHash(desiredSts); err != nil {
 		conditions.SetKubeApiError(r.dk.Conditions(), extensionsControllerStatefulSetConditionType, err)
 
 		return err
@@ -160,7 +158,17 @@ func buildAppLabels(dynakubeName string) *labels.AppLabels {
 }
 
 func buildAffinity() corev1.Affinity {
-	return node.Affinity()
+	return corev1.Affinity{
+		NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: []corev1.NodeSelectorTerm{
+					{
+						MatchExpressions: node.AffinityNodeRequirementForSupportedArches(),
+					},
+				},
+			},
+		},
+	}
 }
 
 func setImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) func(o *appsv1.StatefulSet) {
@@ -202,36 +210,32 @@ func buildContainer(dk *dynakube.DynaKube) corev1.Container {
 }
 
 func buildSecurityContext() *corev1.SecurityContext {
+	userGroupId := int64(1001)
+
 	return &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{
 				"ALL",
 			},
 		},
-		Privileged:               ptr.To(false),
-		RunAsUser:                ptr.To(userGroupId),
-		RunAsGroup:               ptr.To(userGroupId),
-		RunAsNonRoot:             ptr.To(true),
-		ReadOnlyRootFilesystem:   ptr.To(true),
-		AllowPrivilegeEscalation: ptr.To(false),
+		Privileged:               address.Of(false),
+		RunAsUser:                &userGroupId,
+		RunAsGroup:               &userGroupId,
+		RunAsNonRoot:             address.Of(true),
+		ReadOnlyRootFilesystem:   address.Of(true),
+		AllowPrivilegeEscalation: address.Of(false),
 		SeccompProfile: &corev1.SeccompProfile{
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		},
 	}
 }
 
-func buildPodSecurityContext(dk *dynakube.DynaKube) *corev1.PodSecurityContext {
-	podSecurityContext := &corev1.PodSecurityContext{
+func buildPodSecurityContext() *corev1.PodSecurityContext {
+	return &corev1.PodSecurityContext{
 		SeccompProfile: &corev1.SeccompProfile{
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		},
 	}
-
-	if !dk.Spec.Templates.ExtensionExecutionController.UseEphemeralVolume {
-		podSecurityContext.FSGroup = ptr.To(userGroupId)
-	}
-
-	return podSecurityContext
 }
 
 func buildContainerEnvs(dk *dynakube.DynaKube) []corev1.EnvVar {
@@ -361,7 +365,7 @@ func setVolumes(dk *dynakube.DynaKube) func(o *appsv1.StatefulSet) {
 			},
 		}
 
-		if dk.Spec.Templates.ExtensionExecutionController.UseEphemeralVolume {
+		if dk.Spec.Templates.ExtensionExecutionController.PersistentVolumeClaim == nil {
 			o.Spec.Template.Spec.Volumes = append(o.Spec.Template.Spec.Volumes, corev1.Volume{
 				Name: runtimeVolumeName,
 				VolumeSource: corev1.VolumeSource{
@@ -417,44 +421,19 @@ func setVolumes(dk *dynakube.DynaKube) func(o *appsv1.StatefulSet) {
 
 func setPersistentVolumeClaim(dk *dynakube.DynaKube) func(o *appsv1.StatefulSet) {
 	return func(o *appsv1.StatefulSet) {
-		if !dk.Spec.Templates.ExtensionExecutionController.UseEphemeralVolume {
-			if dk.Spec.Templates.ExtensionExecutionController.PersistentVolumeClaim == nil {
-				o.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: runtimeVolumeName,
-						},
-						Spec: defaultPVCSpec(),
+		if dk.Spec.Templates.ExtensionExecutionController.PersistentVolumeClaim != nil {
+			o.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: runtimeVolumeName,
 					},
-				}
-			} else {
-				o.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: runtimeVolumeName,
-						},
-						Spec: *dk.Spec.Templates.ExtensionExecutionController.PersistentVolumeClaim,
-					},
-				}
-			}
-
-			o.Spec.PersistentVolumeClaimRetentionPolicy = &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
-				WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
-				WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+					Spec: *dk.Spec.Templates.ExtensionExecutionController.PersistentVolumeClaim,
+				},
 			}
 		}
-	}
-}
 
-func defaultPVCSpec() corev1.PersistentVolumeClaimSpec {
-	return corev1.PersistentVolumeClaimSpec{
-		AccessModes: []corev1.PersistentVolumeAccessMode{
-			corev1.ReadWriteOnce,
-		},
-		Resources: corev1.VolumeResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceStorage: resource.MustParse("1Gi"),
-			},
-		},
+		if dk.Spec.Templates.ExtensionExecutionController.PersistentVolumeClaimRetentionPolicy != nil {
+			o.Spec.PersistentVolumeClaimRetentionPolicy = dk.Spec.Templates.ExtensionExecutionController.PersistentVolumeClaimRetentionPolicy
+		}
 	}
 }

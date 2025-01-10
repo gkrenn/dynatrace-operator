@@ -39,6 +39,5 @@ func GenerateAllModifiers(dk dynakube.DynaKube, capability capability.Capability
 		NewServicePortModifier(dk, capability, agBaseContainerEnvMap),
 		NewKubernetesMonitoringModifier(dk, capability),
 		NewEecVolumeModifier(dk),
-		NewKspmModifier(dk),
 	}
 }

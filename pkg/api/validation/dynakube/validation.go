@@ -23,16 +23,14 @@ type Validator struct {
 
 var (
 	validatorErrorFuncs = []validatorFunc{
-		isCSIModuleDisabled,
 		isActiveGateModuleDisabled,
 		isExtensionsModuleDisabled,
-		isLogMonitoringModuleDisabled,
-		isKSPMDisabled,
+		isLogModuleModuleDisabled,
 		isOneAgentModuleDisabled,
-		isOneAgentVersionValid,
 		NoApiUrl,
 		IsInvalidApiUrl,
 		IsThirdGenAPIUrl,
+		missingCSIDaemonSet,
 		disabledCSIForReadonlyCSIVolume,
 		invalidActiveGateCapabilities,
 		duplicateActiveGateCapabilities,
@@ -40,6 +38,7 @@ var (
 		conflictingOneAgentConfiguration,
 		conflictingOneAgentNodeSelector,
 		conflictingNamespaceSelector,
+		conflictingLogModuleNodeSelector,
 		noResourcesAvailable,
 		imageFieldSetWithoutCSIFlag,
 		conflictingOneAgentVolumeStorageSettings,
@@ -47,26 +46,18 @@ var (
 		nameTooLong,
 		namespaceSelectorViolateLabelSpec,
 		imageFieldHasTenantImage,
+		validateOneAgentVersionIsSemVerCompliant,
 		extensionControllerImage,
-		extensionControllerPVCStorageDevice,
-		missingKSPMDependency,
-		missingKSPMImage,
-		missingLogMonitoringImage,
 	}
 	validatorWarningFuncs = []validatorFunc{
 		missingActiveGateMemoryLimit,
 		unsupportedOneAgentImage,
 		conflictingHostGroupSettings,
 		deprecatedFeatureFlag,
-		ignoredLogMonitoringTemplate,
-	}
-	updateValidatorErrorFuncs = []updateValidatorFunc{
-		IsMutatedApiUrl,
 	}
 )
 
 type validatorFunc func(ctx context.Context, dv *Validator, dk *dynakube.DynaKube) string
-type updateValidatorFunc func(ctx context.Context, dv *Validator, oldDk *dynakube.DynaKube, newDk *dynakube.DynaKube) string
 
 func New(apiReader client.Reader, cfg *rest.Config) admission.CustomValidator {
 	return &Validator{
@@ -92,21 +83,14 @@ func (v *Validator) ValidateCreate(ctx context.Context, obj runtime.Object) (war
 	return
 }
 
-func (v *Validator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
-	oldDk, err := getDynakube(oldObj)
+func (v *Validator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	dk, err := getDynakube(newObj)
 	if err != nil {
 		return
 	}
 
-	newDk, err := getDynakube(newObj)
-	if err != nil {
-		return
-	}
-
-	errMessages := v.runValidators(ctx, validatorErrorFuncs, newDk)
-	warnings = v.runValidators(ctx, validatorWarningFuncs, newDk)
-
-	errMessages = append(errMessages, v.runUpdateValidators(ctx, updateValidatorErrorFuncs, oldDk, newDk)...)
+	errMessages := v.runValidators(ctx, validatorErrorFuncs, dk)
+	warnings = v.runValidators(ctx, validatorWarningFuncs, dk)
 
 	if len(errMessages) != 0 {
 		err = errors.New(validation.SumErrors(errMessages, "DynaKube"))
@@ -124,18 +108,6 @@ func (v *Validator) runValidators(ctx context.Context, validators []validatorFun
 
 	for _, validate := range validators {
 		if errMsg := validate(ctx, v, dk); errMsg != "" {
-			results = append(results, errMsg)
-		}
-	}
-
-	return results
-}
-
-func (v *Validator) runUpdateValidators(ctx context.Context, updateValidators []updateValidatorFunc, oldDk *dynakube.DynaKube, newDk *dynakube.DynaKube) []string {
-	results := []string{}
-
-	for _, validate := range updateValidators {
-		if errMsg := validate(ctx, v, oldDk, newDk); errMsg != "" {
 			results = append(results, errMsg)
 		}
 	}

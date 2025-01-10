@@ -9,7 +9,7 @@ import (
 
 func TestGet(t *testing.T) {
 	t.Run("empty env -> use fallback", func(t *testing.T) {
-		t.Setenv(ModulesJsonEnv, "")
+		t.Setenv(modulesJsonEnv, "")
 
 		m := GetModules()
 		assert.Equal(t, fallbackModules, m)
@@ -18,7 +18,7 @@ func TestGet(t *testing.T) {
 	})
 
 	t.Run("messy env -> use fallback", func(t *testing.T) {
-		t.Setenv(ModulesJsonEnv, "this is not json :(")
+		t.Setenv(modulesJsonEnv, "this is not json :(")
 
 		m := GetModules()
 		assert.Equal(t, fallbackModules, m)
@@ -29,27 +29,21 @@ func TestGet(t *testing.T) {
 	t.Run("correct env -> set correctly", func(t *testing.T) {
 		jsonValue := `
 		{
-			"csidriver": false,
 			"activeGate": true,
 			"oneAgent": false,
 			"extensions": true,
-			"logMonitoring": false,
-			"edgeConnect": true,
-			"supportability": false,
-			"kspm": true
+			"logModule": false,
+			"edgeConnect": true
 		}`
 		expected := Modules{
-			CSIDriver:      false,
-			ActiveGate:     true,
-			OneAgent:       false,
-			Extensions:     true,
-			LogMonitoring:  false,
-			EdgeConnect:    true,
-			Supportability: false,
-			KSPM:           true,
+			ActiveGate:  true,
+			OneAgent:    false,
+			Extensions:  true,
+			LogModule:   false,
+			EdgeConnect: true,
 		}
 
-		t.Setenv(ModulesJsonEnv, jsonValue)
+		t.Setenv(modulesJsonEnv, jsonValue)
 
 		m := GetModules()
 		assert.Equal(t, expected, m)
@@ -60,33 +54,27 @@ func TestGet(t *testing.T) {
 	t.Run("run only once", func(t *testing.T) {
 		jsonValue := `
 		{
-			"csidriver": false,
 			"activeGate": true,
 			"oneAgent": false,
 			"extensions": true,
-			"logMonitoring": false,
-			"edgeConnect": true,
-			"supportability": false,
-			"kspm": true
+			"logModule": false,
+			"edgeConnect": true
 		}`
 		expected := Modules{
-			CSIDriver:      false,
-			ActiveGate:     true,
-			OneAgent:       false,
-			Extensions:     true,
-			LogMonitoring:  false,
-			EdgeConnect:    true,
-			Supportability: false,
-			KSPM:           true,
+			ActiveGate:  true,
+			OneAgent:    false,
+			Extensions:  true,
+			LogModule:   false,
+			EdgeConnect: true,
 		}
 
-		t.Setenv(ModulesJsonEnv, jsonValue)
+		t.Setenv(modulesJsonEnv, jsonValue)
 
 		m := GetModules()
 
 		assert.Equal(t, expected, m)
 
-		t.Setenv(ModulesJsonEnv, "boom")
+		t.Setenv(modulesJsonEnv, "boom")
 
 		m = GetModules()
 

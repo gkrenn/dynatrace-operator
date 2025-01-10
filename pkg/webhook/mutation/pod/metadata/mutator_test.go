@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -44,7 +43,7 @@ func TestEnabled(t *testing.T) {
 	t.Run("off by feature flag", func(t *testing.T) {
 		mutator := createTestPodMutator(nil)
 		request := createTestMutationRequest(nil, nil, false)
-		request.DynaKube.Spec.MetadataEnrichment.Enabled = ptr.To(true)
+		request.DynaKube.Spec.MetadataEnrichment.Enabled = true
 		request.DynaKube.Annotations = map[string]string{dynakube.AnnotationFeatureAutomaticInjection: "false"}
 
 		enabled := mutator.Enabled(request.BaseRequest)
@@ -55,7 +54,7 @@ func TestEnabled(t *testing.T) {
 		mutator := createTestPodMutator(nil)
 		dk := dynakube.DynaKube{
 			Spec: dynakube.DynaKubeSpec{
-				MetadataEnrichment: dynakube.MetadataEnrichment{Enabled: ptr.To(true)},
+				MetadataEnrichment: dynakube.MetadataEnrichment{Enabled: true},
 			},
 		}
 		request := createTestMutationRequest(&dk, nil, false)
@@ -70,7 +69,7 @@ func TestEnabled(t *testing.T) {
 		dk := dynakube.DynaKube{
 			Spec: dynakube.DynaKubeSpec{
 				MetadataEnrichment: dynakube.MetadataEnrichment{
-					Enabled: ptr.To(true),
+					Enabled: true,
 					NamespaceSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							testLabelKeyMatching: testLabelValue,
@@ -91,7 +90,7 @@ func TestEnabled(t *testing.T) {
 		dk := dynakube.DynaKube{
 			Spec: dynakube.DynaKubeSpec{
 				MetadataEnrichment: dynakube.MetadataEnrichment{
-					Enabled: ptr.To(true),
+					Enabled: true,
 					NamespaceSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							testLabelKeyNotMatching: testLabelValue,

@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 func TestReconcile(t *testing.T) {
@@ -23,7 +22,7 @@ func TestReconcile(t *testing.T) {
 
 	t.Run("no error if not enabled", func(t *testing.T) {
 		dk := createDynaKube()
-		dk.Spec.MetadataEnrichment.Enabled = ptr.To(false)
+		dk.Spec.MetadataEnrichment.Enabled = false
 
 		reconciler := NewReconciler(nil, &dk)
 
@@ -34,7 +33,7 @@ func TestReconcile(t *testing.T) {
 
 	t.Run("clean-up if previously enabled", func(t *testing.T) {
 		dk := createDynaKube()
-		dk.Spec.MetadataEnrichment.Enabled = ptr.To(false)
+		dk.Spec.MetadataEnrichment.Enabled = false
 		dk.Status.MetadataEnrichment.Rules = createRules()
 		conditions.SetStatusUpdated(dk.Conditions(), conditionType, "TESTING")
 
@@ -126,8 +125,9 @@ func createDynaKube() dynakube.DynaKube {
 			Name: "rules-dk",
 		},
 		Spec: dynakube.DynaKubeSpec{
+			DynatraceApiRequestThreshold: dynakube.DefaultMinRequestThresholdMinutes,
 			MetadataEnrichment: dynakube.MetadataEnrichment{
-				Enabled: ptr.To(true),
+				Enabled: true,
 			},
 		},
 		Status: dynakube.DynaKubeStatus{

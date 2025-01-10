@@ -42,14 +42,18 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
-	err = r.createOrUpdateService(ctx)
-	if err != nil {
-		return err
-	}
+	if r.dk.ActiveGate().NeedsService() {
+		err = r.createOrUpdateService(ctx)
+		if err != nil {
+			return err
+		}
 
-	err = r.setAGServiceIPs(ctx)
-	if err != nil {
-		return err
+		err = r.setAGServiceIPs(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		r.dk.Status.ActiveGate.ServiceIPs = []string{}
 	}
 
 	err = r.statefulsetReconciler.Reconcile(ctx)

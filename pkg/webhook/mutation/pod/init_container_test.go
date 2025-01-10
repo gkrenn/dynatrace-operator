@@ -4,13 +4,12 @@ import (
 	"testing"
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube"
-	"github.com/Dynatrace/dynatrace-operator/pkg/util/installconfig"
+	"github.com/Dynatrace/dynatrace-operator/pkg/util/address"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 )
 
 func TestCreateInstallInitContainerBase(t *testing.T) {
@@ -51,7 +50,7 @@ func TestCreateInstallInitContainerBase(t *testing.T) {
 	t.Run("should overwrite partially", func(t *testing.T) {
 		dk := getTestDynakube()
 		pod := getTestPod()
-		testUser := ptr.To(int64(420))
+		testUser := address.Of(int64(420))
 		pod.Spec.Containers[0].SecurityContext.RunAsUser = nil
 		pod.Spec.Containers[0].SecurityContext.RunAsGroup = testUser
 		webhookImage := "test-image"
@@ -71,8 +70,8 @@ func TestCreateInstallInitContainerBase(t *testing.T) {
 	t.Run("container SecurityContext overrules defaults", func(t *testing.T) {
 		dk := getTestDynakube()
 		pod := getTestPod()
-		overruledUser := ptr.To(int64(420))
-		testUser := ptr.To(int64(420))
+		overruledUser := address.Of(int64(420))
+		testUser := address.Of(int64(420))
 		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
 		pod.Spec.SecurityContext.RunAsUser = overruledUser
 		pod.Spec.SecurityContext.RunAsGroup = overruledUser
@@ -93,7 +92,7 @@ func TestCreateInstallInitContainerBase(t *testing.T) {
 	})
 	t.Run("PodSecurityContext overrules defaults", func(t *testing.T) {
 		dk := getTestDynakube()
-		testUser := ptr.To(int64(420))
+		testUser := address.Of(int64(420))
 		pod := getTestPod()
 		pod.Spec.Containers[0].SecurityContext = nil
 		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
@@ -116,8 +115,8 @@ func TestCreateInstallInitContainerBase(t *testing.T) {
 	t.Run("should set RunAsNonRoot if root user is used", func(t *testing.T) {
 		dk := getTestDynakube()
 		pod := getTestPod()
-		pod.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To(rootUserGroup)
-		pod.Spec.Containers[0].SecurityContext.RunAsGroup = ptr.To(rootUserGroup)
+		pod.Spec.Containers[0].SecurityContext.RunAsUser = address.Of(rootUserGroup)
+		pod.Spec.Containers[0].SecurityContext.RunAsGroup = address.Of(rootUserGroup)
 		webhookImage := "test-image"
 		clusterID := "id"
 
@@ -230,8 +229,6 @@ func TestInitContainerResources(t *testing.T) {
 	})
 
 	t.Run("should ignore if csi not used", func(t *testing.T) {
-		installconfig.SetModulesOverride(t, installconfig.Modules{CSIDriver: false})
-
 		dk := getTestDynakubeDefaultAppMon()
 
 		initResources := initContainerResources(*dk)

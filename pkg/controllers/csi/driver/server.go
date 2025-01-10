@@ -20,11 +20,9 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/url"
 	"os"
 	"runtime"
-	"strconv"
-	"sync/atomic"
+	"strings"
 	"time"
 
 	dtcsi "github.com/Dynatrace/dynatrace-operator/pkg/controllers/csi"
@@ -42,17 +40,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-const MaxGrpcRequests = 20
-
-var counter atomic.Int32
-
 type Server struct {
 	csi.UnimplementedIdentityServer
 	csi.UnimplementedNodeServer
 
 	fs      afero.Afero
 	mounter mount.Interface
-	db      metadata.Access
 
 	publishers map[string]csivolumes.Publisher
 	opts       dtcsi.CSIOptions
@@ -62,12 +55,11 @@ type Server struct {
 var _ csi.IdentityServer = &Server{}
 var _ csi.NodeServer = &Server{}
 
-func NewServer(opts dtcsi.CSIOptions, db metadata.Access) *Server {
+func NewServer(opts dtcsi.CSIOptions) *Server {
 	return &Server{
 		opts:    opts,
 		fs:      afero.Afero{Fs: afero.NewOsFs()},
 		mounter: mount.New(""),
-		db:      db,
 		path:    metadata.PathResolver{RootDir: opts.RootDir},
 	}
 }
@@ -77,39 +69,30 @@ func (svr *Server) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (svr *Server) Start(ctx context.Context) error {
-	defer metadata.LogAccessOverview(svr.db)
-
-	endpoint, err := url.Parse(svr.opts.Endpoint)
-	addr := endpoint.Host + endpoint.Path
-
+	proto, addr, err := parseEndpoint(svr.opts.Endpoint)
 	if err != nil {
 		return fmt.Errorf("failed to parse endpoint '%s': %w", svr.opts.Endpoint, err)
 	}
 
-	if endpoint.Scheme == "unix" {
+	if proto == "unix" {
 		if err := svr.fs.Remove(addr); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to remove old endpoint on '%s': %w", addr, err)
 		}
 	}
 
 	svr.publishers = map[string]csivolumes.Publisher{
-		appvolumes.Mode:  appvolumes.NewAppVolumePublisher(svr.fs, svr.mounter, svr.db, svr.path),
-		hostvolumes.Mode: hostvolumes.NewHostVolumePublisher(svr.fs, svr.mounter, svr.db, svr.path),
+		appvolumes.Mode:  appvolumes.NewPublisher(svr.fs, svr.mounter, svr.path),
+		hostvolumes.Mode: hostvolumes.NewPublisher(svr.fs, svr.mounter, svr.path),
 	}
 
-	log.Info("starting listener", "scheme", endpoint.Scheme, "address", addr)
+	log.Info("starting listener", "protocol", proto, "address", addr)
 
-	listener, err := net.Listen(endpoint.Scheme, addr)
+	listener, err := net.Listen(proto, addr)
 	if err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
 
-	maxGrpcRequests, err := strconv.Atoi(os.Getenv("GRPC_MAX_REQUESTS_LIMIT"))
-	if err != nil {
-		maxGrpcRequests = MaxGrpcRequests
-	}
-
-	server := grpc.NewServer(grpc.UnaryInterceptor(grpcLimiter(int32(maxGrpcRequests)))) //nolint:gosec
+	server := grpc.NewServer(grpc.UnaryInterceptor(logGRPC()))
 
 	go func() {
 		ticker := time.NewTicker(memoryMetricTick)
@@ -191,32 +174,48 @@ func (svr *Server) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpubli
 		return nil, err
 	}
 
-	for _, publisher := range svr.publishers {
-		canUnpublish, err := publisher.CanUnpublishVolume(ctx, volumeInfo)
-		if err != nil {
-			log.Error(err, "couldn't determine if volume can be unpublished", "publisher", publisher)
-		}
-
-		if canUnpublish {
-			response, err := publisher.UnpublishVolume(ctx, volumeInfo)
-			if err != nil {
-				return nil, err
-			}
-
-			return response, nil
-		}
-	}
-
-	svr.unmountUnknownVolume(*volumeInfo)
+	svr.unmount(*volumeInfo)
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
-func (svr *Server) unmountUnknownVolume(volumeInfo csivolumes.VolumeInfo) {
-	log.Info("VolumeID not present in the database", "volumeID", volumeInfo.VolumeID, "targetPath", volumeInfo.TargetPath)
-
+func (svr *Server) unmount(volumeInfo csivolumes.VolumeInfo) {
+	// targetPath always needs to be unmounted
 	if err := svr.mounter.Unmount(volumeInfo.TargetPath); err != nil {
-		log.Error(err, "Tried to unmount unknown volume", "volumeID", volumeInfo.VolumeID)
+		log.Error(err, "Unmount failed", "path", volumeInfo.TargetPath)
+	}
+
+	appMountDir := svr.path.AppMountForID(volumeInfo.VolumeID)
+
+	mappedDir := svr.path.AppMountMappedDir(volumeInfo.VolumeID) // Unmount follows symlinks, so no need to check for them here
+
+	_, err := svr.fs.Stat(mappedDir)
+	if os.IsNotExist(err) { // case for timed out mounts
+		_ = svr.fs.RemoveAll(appMountDir)
+
+		return
+	} else if err != nil {
+		log.Error(err, "unexpected error when checking for app mount folder, trying to unmount just to be sure")
+	}
+
+	if err := svr.mounter.Unmount(mappedDir); err != nil {
+		// Just try to unmount, nothing really can go wrong, just have to handle errors
+		log.Error(err, "Unmount failed", "path", mappedDir)
+	} else {
+		// special handling is needed, because after upgrade/restart the mappedDir will be still busy
+		needsCleanUp := []string{
+			svr.path.AppMountVarDir(volumeInfo.VolumeID),
+			svr.path.AppMountWorkDir(volumeInfo.VolumeID),
+		}
+
+		for _, path := range needsCleanUp {
+			err := svr.fs.RemoveAll(path) // you see correctly, we don't keep the logs of the app mounts, will keep them when they will have a use
+			if err != nil {
+				log.Error(err, "failed to clean up unmounted volume dir", "path", path)
+			}
+		}
+
+		_ = svr.fs.RemoveAll(appMountDir) // try to cleanup fully, but lets not spam the logs with errors
 	}
 }
 
@@ -244,41 +243,40 @@ func (svr *Server) NodeExpandVolume(context.Context, *csi.NodeExpandVolumeReques
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-func grpcLimiter(maxGrpcRequests int32) grpc.UnaryServerInterceptor {
+func logGRPC() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		var methodName string
+		if info.FullMethod == "/csi.v1.Identity/Probe" || info.FullMethod == "/csi.v1.Node/NodeGetCapabilities" {
+			return handler(ctx, req)
+		}
 
-		switch {
-		case info.FullMethod == "/csi.v1.Node/NodePublishVolume":
+		methodName := ""
+
+		if info.FullMethod == "/csi.v1.Node/NodePublishVolume" {
 			req := req.(*csi.NodePublishVolumeRequest)
 			methodName = "NodePublishVolume"
 			log.Info("GRPC call", "method", methodName, "volume-id", req.GetVolumeId())
-		case info.FullMethod == "/csi.v1.Node/NodeUnpublishVolume":
+		} else if info.FullMethod == "/csi.v1.Node/NodeUnpublishVolume" {
 			req := req.(*csi.NodeUnpublishVolumeRequest)
 			methodName = "NodeUnpublishVolume"
 			log.Info("GRPC call", "method", methodName, "volume-id", req.GetVolumeId())
-		default:
-			resp, err := handler(ctx, req)
-			if err != nil {
-				log.Error(err, "GRPC failed", "full_method", info.FullMethod)
-			}
-
-			return resp, err
-		}
-
-		counter.Add(1)
-		defer counter.Add(-1)
-
-		if counter.Load() > maxGrpcRequests {
-			return nil, status.Error(codes.ResourceExhausted, fmt.Sprintf("rate limit exceeded, current value %d more than max %d", counter.Load(), MaxGrpcRequests))
 		}
 
 		resp, err := handler(ctx, req)
-
 		if err != nil {
-			log.Error(err, "GRPC call failed", "method", methodName, "full_method", info.FullMethod)
+			log.Error(err, "GRPC call failed", "method", methodName)
 		}
 
 		return resp, err
 	}
+}
+
+func parseEndpoint(ep string) (string, string, error) {
+	if strings.HasPrefix(strings.ToLower(ep), "unix://") || strings.HasPrefix(strings.ToLower(ep), "tcp://") {
+		s := strings.SplitN(ep, "://", 2)
+		if s[1] != "" {
+			return s[0], s[1], nil
+		}
+	}
+
+	return "", "", fmt.Errorf("invalid endpoint: %v", ep)
 }

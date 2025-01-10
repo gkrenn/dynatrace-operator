@@ -2,12 +2,9 @@ package oneagent
 
 import (
 	"context"
-	"strings"
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/consts"
 	"github.com/Dynatrace/dynatrace-operator/pkg/injection/namespace/initgeneration"
-	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
-	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/volumes"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
 	"github.com/pkg/errors"
@@ -58,8 +55,9 @@ func (mut *Mutator) Injected(request *dtwebhook.BaseRequest) bool {
 }
 
 func (mut *Mutator) Mutate(ctx context.Context, request *dtwebhook.MutationRequest) error {
-	if ok, reason := mut.isInjectionPossible(request); !ok {
-		setNotInjectedAnnotations(request.Pod, reason)
+	if !request.DynaKube.IsOneAgentCommunicationRouteClear() {
+		log.Info("OneAgent were not yet able to communicate with tenant, no direct route or ready ActiveGate available, code modules have not been injected.")
+		setNotInjectedAnnotations(request.Pod, dtwebhook.EmptyConnectionInfoReason)
 
 		return nil
 	}
@@ -114,40 +112,12 @@ func (mut *Mutator) ensureInitSecret(request *dtwebhook.MutationRequest) error {
 	return nil
 }
 
-func (mut *Mutator) isInjectionPossible(request *dtwebhook.MutationRequest) (bool, string) {
-	reasons := []string{}
-
-	dk := request.DynaKube
-
-	_, err := dk.TenantUUIDFromConnectionInfoStatus()
-	if err != nil {
-		log.Info("tenant UUID is not available, OneAgent cannot be injected", "pod", request.PodName())
-
-		reasons = append(reasons, EmptyTenantUUIDReason)
-	}
-
-	if !dk.IsOneAgentCommunicationRouteClear() {
-		log.Info("OneAgent communication route is not clear, OneAgent cannot be injected", "pod", request.PodName())
-
-		reasons = append(reasons, EmptyConnectionInfoReason)
-	}
-
-	if dk.CodeModulesVersion() == "" && dk.CodeModulesImage() == "" {
-		log.Info("information about the codemodules (version or image) is not available, OneAgent cannot be injected", "pod", request.PodName())
-
-		reasons = append(reasons, UnknownCodeModuleReason)
-	}
-
-	if len(reasons) > 0 {
-		return false, strings.Join(reasons, ", ")
-	}
-
-	return true, ""
-}
-
 func ContainerIsInjected(container corev1.Container) bool {
-	return env.IsIn(container.Env, dynatraceMetadataEnv) &&
-		env.IsIn(container.Env, preloadEnv) &&
-		volumes.IsIn(container.VolumeMounts, OneAgentBinVolumeName) &&
-		volumes.IsIn(container.VolumeMounts, oneAgentShareVolumeName)
+	for _, e := range container.Env {
+		if e.Name == dynatraceMetadataEnv {
+			return true
+		}
+	}
+
+	return false
 }

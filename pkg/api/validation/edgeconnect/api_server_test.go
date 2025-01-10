@@ -27,6 +27,7 @@ func TestApiServer(t *testing.T) {
 						Endpoint:     "endpoint",
 						Resource:     "resource",
 					},
+					ServiceAccountName: testServiceAccountName,
 				},
 			}
 			assertAllowed(t, ec, prepareTestServiceAccount(testServiceAccountName, testNamespace))

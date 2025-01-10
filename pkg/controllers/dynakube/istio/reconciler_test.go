@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/utils/ptr"
 )
 
 func TestSplitCommunicationHost(t *testing.T) {
@@ -493,7 +492,7 @@ func createTestDynaKube() *dynakube.DynaKube {
 			OneAgent: dynakube.OneAgentSpec{
 				CloudNativeFullStack: &dynakube.CloudNativeFullStackSpec{},
 			},
-			DynatraceApiRequestThreshold: ptr.To(uint16(15)),
+			DynatraceApiRequestThreshold: 15,
 		},
 		Status: dynakube.DynaKubeStatus{
 			OneAgent: dynakube.OneAgentStatus{

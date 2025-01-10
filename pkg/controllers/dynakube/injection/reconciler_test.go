@@ -29,7 +29,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
@@ -45,8 +44,8 @@ const (
 
 	testHost = "test-host"
 
-	testDynakube   = "test-dynakube"
-	testDynakube2  = "test-dynakube2"
+	testDynakube   = "test-name"
+	testDynakube2  = "test-name2"
 	testNamespace  = "test-namespace"
 	testNamespace2 = "test-namespace2"
 
@@ -97,7 +96,7 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 				MetadataEnrichment: dynakube.MetadataEnrichment{
-					Enabled: ptr.To(true),
+					Enabled: true,
 					NamespaceSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							testNamespaceSelectorLabel: testDynakube,
@@ -389,7 +388,7 @@ func TestSetupEnrichmentInjection(t *testing.T) {
 		})
 		rec.enrichmentRulesReconciler = createGenericReconcilerMock(t)
 		rec.monitoredEntitiesReconciler = createGenericReconcilerMock(t)
-		rec.dk.Spec.MetadataEnrichment.Enabled = ptr.To(false)
+		rec.dk.Spec.MetadataEnrichment.Enabled = false
 
 		err := rec.setupEnrichmentInjection(context.Background())
 		require.NoError(t, err)
@@ -405,7 +404,7 @@ func TestSetupEnrichmentInjection(t *testing.T) {
 		})
 		rec.enrichmentRulesReconciler = createGenericReconcilerMock(t)
 		rec.monitoredEntitiesReconciler = createGenericReconcilerMock(t)
-		rec.dk.Spec.MetadataEnrichment.Enabled = ptr.To(true)
+		rec.dk.Spec.MetadataEnrichment.Enabled = true
 
 		err := rec.setupEnrichmentInjection(context.Background())
 		require.NoError(t, err)

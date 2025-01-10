@@ -206,6 +206,7 @@ func TestNeedsUpdate(t *testing.T) {
 			OneAgent: dynakube.OneAgentSpec{
 				ClassicFullStack: &dynakube.HostInjectSpec{},
 			},
+			DynatraceApiRequestThreshold: dynakube.DefaultMinRequestThresholdMinutes,
 		},
 		Status: dynakube.DynaKubeStatus{
 			OneAgent: dynakube.OneAgentStatus{

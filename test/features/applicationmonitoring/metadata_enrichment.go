@@ -47,7 +47,9 @@ func MetadataEnrichment(t *testing.T) features.Feature {
 	testDynakube := *dynakubeComponents.New(
 		dynakubeComponents.WithApiUrl(secretConfig.ApiUrl),
 		dynakubeComponents.WithMetadataEnrichment(),
-		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{}),
+		dynakubeComponents.WithApplicationMonitoringSpec(&dynakube.ApplicationMonitoringSpec{
+			UseCSIDriver: false,
+		}),
 		dynakubeComponents.WithNameBasedMetadataEnrichmentNamespaceSelector(),
 		dynakubeComponents.WithNameBasedOneAgentNamespaceSelector(),
 	)

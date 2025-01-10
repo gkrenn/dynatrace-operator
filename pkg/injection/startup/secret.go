@@ -46,10 +46,6 @@ func (secret SecretConfig) logContent() {
 		secret.PaasToken = asterisks
 	}
 
-	if secret.Proxy != "" {
-		secret.Proxy = asterisks
-	}
-
 	log.Info("contents of secret config", "content", secret)
 }
 

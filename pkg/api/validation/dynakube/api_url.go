@@ -20,8 +20,6 @@ const (
 
 	errorThirdGenApiUrl = `The DynaKube's specification has an 3rd gen API URL. Make sure to remove the 'apps' part
 	out of it. Example: ` + ExampleApiUrl
-
-	errorMutatedApiUrl = `The DynaKube's specification mutated the API URL although it is immutable. Please delete the CR and then apply a new one`
 )
 
 func NoApiUrl(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
@@ -75,14 +73,6 @@ func IsInvalidApiUrl(_ context.Context, _ *Validator, dk *dynakube.DynaKube) str
 func IsThirdGenAPIUrl(_ context.Context, _ *Validator, dk *dynakube.DynaKube) string {
 	if strings.Contains(dk.ApiUrl(), ".apps.") {
 		return errorThirdGenApiUrl
-	}
-
-	return ""
-}
-
-func IsMutatedApiUrl(_ context.Context, _ *Validator, oldDk *dynakube.DynaKube, newDk *dynakube.DynaKube) string {
-	if oldDk.Spec.APIURL != newDk.Spec.APIURL {
-		return errorMutatedApiUrl
 	}
 
 	return ""

@@ -9,7 +9,6 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/v1beta3/dynakube/activegate"
 	"github.com/Dynatrace/dynatrace-operator/test/helpers/components/operator"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 type Option func(dk *dynakube.DynaKube)
@@ -71,7 +70,7 @@ func WithActiveGate() Option {
 
 func WithMetadataEnrichment() Option {
 	return func(dk *dynakube.DynaKube) {
-		dk.Spec.MetadataEnrichment.Enabled = ptr.To(true)
+		dk.Spec.MetadataEnrichment.Enabled = true
 	}
 }
 
@@ -157,12 +156,7 @@ func WithApplicationMonitoringSpec(applicationMonitoringSpec *dynakube.Applicati
 
 func WithExtensionsEnabledSpec(promEnabled bool) Option {
 	return func(dk *dynakube.DynaKube) {
-		if promEnabled {
-			dk.Spec.Extensions = &dynakube.ExtensionsSpec{}
-			dk.Spec.Templates.ExtensionExecutionController.UseEphemeralVolume = true
-		} else {
-			dk.Spec.Extensions = nil
-		}
+		dk.Spec.Extensions.Enabled = promEnabled
 	}
 }
 
