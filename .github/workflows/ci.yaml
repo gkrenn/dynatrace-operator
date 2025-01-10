@@ -86,7 +86,6 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
       - name: Upload Image
-        if: matrix.platform == 'amd64' || github.ref_protected
         uses: ./.github/actions/upload-image
         with:
           platform: ${{ matrix.platform }}
