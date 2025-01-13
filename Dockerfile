@@ -79,6 +79,6 @@ ENV OPERATOR=dynatrace-operator \
 
 RUN /usr/local/bin/user_setup
 
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
+ENTRYPOINT ["/usr/local/bin/dynatrace-operator"]
 
 USER ${USER_UID}:${USER_UID}
