@@ -40,7 +40,7 @@ RUN dnf install --installroot /tmp/rootfs-dependency \
       /tmp/rootfs-dependency/var/log/dnf* \
       /tmp/rootfs-dependency/var/log/yum.*
 
-# platform is required otherwise the copy command will copy the wrong architecture files
+# platform is required, otherwise the copy command will copy the wrong architecture files
 FROM --platform=$TARGETPLATFORM base
 
 COPY --from=dependency /tmp/rootfs-dependency /
@@ -79,6 +79,6 @@ ENV OPERATOR=dynatrace-operator \
 
 RUN /usr/local/bin/user_setup
 
-ENTRYPOINT ["/usr/local/bin/dynatrace-operator"]
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
 USER ${USER_UID}:${USER_UID}
