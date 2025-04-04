@@ -47,7 +47,7 @@ jobs:
     needs: [prepare]
     strategy:
       matrix:
-        platform: [amd64, arm64, ppc64le, s390x]
+        platform: [amd64, arm64]
         # registry: [gcr, dockerhub, rhcc, amazon-ecr]
         registry: [rhcc]
         include:
@@ -173,7 +173,7 @@ jobs:
           version: ${{ needs.prepare.outputs.version }}
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
-          platforms: "amd64, arm64, ppc64le, s390x"
+          platforms: "amd64, arm64"
       - name: Sign images for ${{matrix.registry}}
         uses: ./.github/actions/sign-image
         with:
