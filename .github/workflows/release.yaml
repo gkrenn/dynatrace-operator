@@ -126,7 +126,8 @@ jobs:
     permissions:
       id-token: write
     outputs:
-      digest: ${{ steps.create-manifests.outputs.digest }}
+      digest_rhcc: ${{ steps.store-digest.outputs.digest_rhcc }}
+      digest_rhcc2: ${{ steps.store-digest.outputs.digest_rhcc2 }}
     strategy:
       matrix:
         # registry: [gcr, dockerhub, rhcc, amazon-ecr]
@@ -184,6 +185,13 @@ jobs:
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           platforms: "amd64, arm64"
+      - name: Store digest
+        id: store-digest
+        shell: bash
+        run: |
+          registry="${{ matrix.registry }}"
+          digest="${{ steps.create-manifests.outputs.digest }}"
+          echo "digest_${registry}=${digest}" >> "$GITHUB_OUTPUT"
       # - name: Sign images for ${{matrix.registry}}
       #   uses: ./.github/actions/sign-image
       #   with:
@@ -300,7 +308,8 @@ jobs:
           make manifests/openshift/olm IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${VERSION}@${{needs.manifest.outputs.digest}}"
           make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${VERSION}@${{needs.manifest.outputs.digest}}"
 
-          echo tag is ${VERSION}@${{needs.manifest.outputs.digest}}
+          echo tag is ${VERSION}@${{needs.manifest.outputs.digest_rhcc}}
+          echo tag is ${VERSION}@${{needs.manifest.outputs.digest_rhcc2}}
           cp config/deploy/kubernetes/kubernetes.yaml config/deploy/kubernetes/gke-autopilot.yaml
       # - name: Build helm packages
       #   uses: ./.github/actions/build-helm
