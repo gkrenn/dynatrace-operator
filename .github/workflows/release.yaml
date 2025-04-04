@@ -174,12 +174,12 @@ jobs:
           registry: ${{ matrix.url }}
           repository: ${{ secrets[matrix.repository] }}
           platforms: "amd64, arm64"
-      - name: Sign images for ${{matrix.registry}}
-        uses: ./.github/actions/sign-image
-        with:
-          image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{ steps.create-manifests.outputs.digest }}
-          signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          signing-password: ${{ secrets.COSIGN_PASSWORD }}
+      # - name: Sign images for ${{matrix.registry}}
+      #   uses: ./.github/actions/sign-image
+      #   with:
+      #     image: ${{ matrix.url }}/${{ secrets[matrix.repository] }}:${{ needs.prepare.outputs.version }}@${{ steps.create-manifests.outputs.digest }}
+      #     signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      #     signing-password: ${{ secrets.COSIGN_PASSWORD }}
       # - name: Create sbom for ${{matrix.registry}}
       #   id: sbom
       #   uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # 0.30.0
