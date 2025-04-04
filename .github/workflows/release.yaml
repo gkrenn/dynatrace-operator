@@ -256,7 +256,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [prepare, build, manifest, run-preflight-rhcc]
+    needs: [prepare, build, manifest]
     # needs: [prepare, build, manifest, run-preflight-rhcc]
     environment: Release
     permissions:
