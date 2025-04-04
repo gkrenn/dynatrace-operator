@@ -49,7 +49,7 @@ jobs:
       matrix:
         platform: [amd64, arm64]
         # registry: [gcr, dockerhub, rhcc, amazon-ecr]
-        registry: [rhcc]
+        registry: [rhcc, rhcc2]
         include:
         # - registry: gcr
         #   url: gcr.io
