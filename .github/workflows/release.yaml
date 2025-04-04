@@ -69,6 +69,11 @@ jobs:
           username: RHCC_USERNAME
           password: RHCC_PASSWORD
           repository: RHCC_REPOSITORY
+        - registry: rhcc2
+          url: quay.io
+          username: RHCC_USERNAME
+          password: RHCC_PASSWORD
+          repository: RHCC_REPOSITORY2
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -125,7 +130,7 @@ jobs:
     strategy:
       matrix:
         # registry: [gcr, dockerhub, rhcc, amazon-ecr]
-        registry: [rhcc]
+        registry: [rhcc, rhcc2]
         include:
           # - registry: gcr
           #   url: gcr.io
@@ -145,6 +150,11 @@ jobs:
             username: RHCC_USERNAME
             password: RHCC_PASSWORD
             repository: RHCC_REPOSITORY
+          - registry: rhcc2
+            url: quay.io
+            username: RHCC_USERNAME
+            password: RHCC_PASSWORD
+            repository: RHCC_REPOSITORY2
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
