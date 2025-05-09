@@ -36,7 +36,7 @@ jobs:
         run: |
           git fetch origin "+refs/heads/*:refs/remotes/origin/*" "+refs/pull/*/head:refs/remotes/origin/pr/*"
           if [[ ${{ github.event_name }} == "pull_request" ]]; then
-            CHANGED_FILES=$(git diff --name-only origin/pr/${{ github.event.pull_request.number }}..origin/${{ github.base_ref }})
+            CHANGED_FILES=$(git diff --name-only HEAD^)
           else
             CHANGED_FILES=$(git diff --name-only origin/${{ github.ref_name }}..HEAD^)
           fi
