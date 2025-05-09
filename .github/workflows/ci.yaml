@@ -36,9 +36,9 @@ jobs:
         run: |
           git fetch origin "+refs/heads/*:refs/remotes/origin/*" "+refs/pull/*/head:refs/remotes/origin/pr/*"
           if [[ ${{ github.event_name }} == "pull_request" ]]; then
-            CHANGED_FILES=$(git diff --name-only HEAD^)
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
           else
-            CHANGED_FILES=$(git diff --name-only origin/${{ github.ref_name }}..HEAD^)
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
           fi
           echo "go_changed=$(echo "$CHANGED_FILES" | grep -E '\.go$|go\.mod' | wc -l)" >> $GITHUB_OUTPUT
           echo "docker_changed=$(echo "$CHANGED_FILES" | grep -E 'Dockerfile' | wc -l)" >> $GITHUB_OUTPUT
