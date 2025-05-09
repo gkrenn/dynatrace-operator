@@ -35,7 +35,6 @@ jobs:
       - name: Detect file changes
         id: filter
         run: |
-          git fetch origin "+refs/heads/*:refs/remotes/origin/*" "+refs/pull/*/head:refs/remotes/origin/pr/*"
           if [[ ${{ github.event_name }} == "pull_request" ]]; then
             CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
           else
