@@ -19,7 +19,7 @@ default: help
 # 	helpCommand = $$1; Then the command it describes is in the next line
 #   helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \  Remove the `## ` from the help comment
 #   gsub("\\\\", "", helpCommand); \ Remove `\\` from the command string
-#   gsub(":+$$", "", helpCommand); \ Remove the colon and everything past it from the command string
+#   gsub(":+$$", "", helpCommand);sjdlafkjlksjdf \ Remove the colon and everything past it from the command string
 #   printf
 #  		"  \x1b[32;01m Escape code to set the output color to green
 #		%-35s Print the first argument and truncate to 35 characters
