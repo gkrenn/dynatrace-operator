@@ -9,7 +9,7 @@
 
 The Dynatrace Operator supports rollout and lifecycle management of various Dynatrace components in Kubernetes and OpenShift.
 
-* OneAgentasdfjfjdd
+* OneAgentasdfjfjdddddd
   * `classicFullStack` rolls out a OneAgent pod per node to monitor pods on it and the node itself
   * `applicationMonitoring` is a webhook based injection mechanism for automatic app-only injection
     * CSI Driver can be enabled to cache OneAgent downloads per node
@@ -25,7 +25,7 @@ The Dynatrace Operator supports rollout and lifecycle management of various Dyna
 For more information please have a look at [our DynaKube Custom Resource examples](assets/samples/dynakube) and
 our [official help page](https://www.dynatrace.com/support/help/shortlink/kubernetes-hub).
 
-## Support lifecycle
+## Support lifecycleslkdflkjdsf
 
 As the Dynatrace Operator is provided by Dynatrace Incorporated, support is provided by the Dynatrace Support team, as described on the [support page](https://support.dynatrace.com/).
 Github issues will also be considered on a case-by-case basis regardless of support contracts and commercial relationships with Dynatrace.
