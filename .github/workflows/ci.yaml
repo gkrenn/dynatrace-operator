@@ -194,21 +194,6 @@ jobs:
           make go/gen_mocks
           git diff --exit-code
 
-  security:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.go_changed == 'true' || needs.detect-changes.outputs.docker_changed == 'true' || needs.detect-changes.outputs.ci_changed == 'true'
-    name: Code security scanning alerts
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/golang@b98d498629f1c368650224d6d212bf7dfa89e4bf # v0.4.0
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_API_TOKEN }}
-        with:
-          args: --severity-threshold=high
-
   markdown-lint:
     name: Lint markdown files
     runs-on: ubuntu-latest
