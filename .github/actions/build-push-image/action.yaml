@@ -54,7 +54,7 @@ runs:
           ${{ runner.os }}-go-build-cache-${{ hashFiles('**/go.sum') }}-
           ${{ runner.os }}-go-build-cache-
     - name: Inject go-build-cache
-      uses: gkrenn/dynatrace-operator/.github/actions/buildkit-cache-dance2
+      uses: ./.github/actions/buildkit-cache-dance2
       with:
         builder: ${{ steps.setup-buildx.outputs.name }}
         cache-dir: go-build-cache
