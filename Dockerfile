@@ -20,8 +20,8 @@ ARG GO_BUILD_TAGS
 ARG TARGETARCH
 ARG TARGETOS
 
-RUN --mount=type=cache,target="/root/.cache/go-build" \
-    --mount=type=cache,target="/go/pkg" \
+RUN --mount=type=cache,target="/root/.cache/go-build",id=go-build-cache-$TARGETARCH \
+    --mount=type=cache,target="/go/pkg",id=go-pkg-cache \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -tags "${GO_BUILD_TAGS}" -trimpath -ldflags="${GO_LINKER_ARGS}" \
     -o ./build/_output/bin/dynatrace-operator ./cmd/

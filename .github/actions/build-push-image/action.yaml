@@ -27,6 +27,7 @@ runs:
       uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      id: setup-buildx
     - name: Set up Golang
       uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
       with:
@@ -44,6 +45,39 @@ runs:
       shell: bash
       run: |
         touch dynatrace-operator-bin-sbom.cdx.json
+    - name: Go Build Cache for Docker
+      uses: actions/cache@v4
+      with:
+        path: go-build-cache
+        key: ${{ runner.os }}-go-build-cache-${{ hashFiles('**/go.sum') }}-${{ hashFiles('**/go.mod') }}
+        restore-keys: |
+          ${{ runner.os }}-go-build-cache-${{ hashFiles('**/go.sum') }}-
+          ${{ runner.os }}-go-build-cache-
+    - name: Upload go-build-cache artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: go-build-cache
+        path: go-build-cache
+    - name: Inject go-build-cache
+      uses: reproducible-containers/buildkit-cache-dance@5b81f4d29dc8397a7d341dba3aeecc7ec54d6361 # v3.3.0
+      with:
+        builder: ${{ steps.setup-buildx.outputs.name }}
+        cache-dir: go-build-cache
+        cache-map: |
+          {
+            "go-build-cache/amd64": {
+              "target": "/root/.cache/go-build",
+              "id": "go-build-cache-amd64"
+            },
+            "go-build-cache/arm64": {
+              "target": "/root/.cache/go-build",
+              "id": "go-build-cache-arm64"
+            },
+            "go-build-cache/go-pkg-cache": {
+              "target": "/go/pkg",
+              "id": "go-pkg-cache"
+            }
+          }
     - name: Docker metadata
       uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
       id: meta
@@ -69,8 +103,9 @@ runs:
         platforms: ${{ inputs.platforms }}
         push: true
         tags: ${{ inputs.tags }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         labels: |
           ${{ steps.meta.outputs.labels }}
         annotations: |
           ${{ steps.meta.outputs.annotations }}
-
