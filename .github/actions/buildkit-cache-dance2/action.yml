@@ -32,6 +32,6 @@ inputs:
     description: "The name of the builder. Default: 'default'"
 runs:
   using: 'node20'
-  main: '../dist/index.js'
-  post: '../dist/index.js'
+  main: 'dist/index.js'
+  post: 'dist/index.js'
   post-if: 'success() || github.event.inputs.save-always'
