@@ -53,11 +53,6 @@ runs:
         restore-keys: |
           ${{ runner.os }}-go-build-cache-${{ hashFiles('**/go.sum') }}-
           ${{ runner.os }}-go-build-cache-
-    - name: Upload go-build-cache artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: go-build-cache
-        path: go-build-cache
     - name: Inject go-build-cache
       uses: reproducible-containers/buildkit-cache-dance@5b81f4d29dc8397a7d341dba3aeecc7ec54d6361 # v3.3.0
       with:
