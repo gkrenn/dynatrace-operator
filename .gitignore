@@ -107,3 +107,7 @@ local/
 
 permissions.md
 dynatrace-operator-bin-sbom.cdx.json
+
+# make an exception for folder .github/actions/buildkit-cache-dance2/dist/index.js and allow it
+
+!.github/actions/buildkit-cache-dance2/dist/index.js
