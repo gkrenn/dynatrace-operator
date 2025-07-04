@@ -1,0 +1,38 @@
+# Multi-stage Dockerfile for building buildkit-cache-dance
+FROM node:20-alpine AS builder
+
+# Install pnpm
+RUN npm install -g pnpm@10.11.0
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the project
+RUN pnpm run build
+
+# Runtime stage (optional - creates a minimal image with just the built output)
+FROM node:20-alpine AS runtime
+
+WORKDIR /app
+
+# Copy built files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
+
+# Install only production dependencies
+RUN npm install --only=production
+
+# Make the CLI executable
+RUN chmod +x dist/index.js
+
+# Set the entrypoint
+ENTRYPOINT ["node", "dist/index.js"]
