@@ -49,7 +49,7 @@ func newRootCommand() *cobra.Command {
 }
 
 func rootCommand(_ *cobra.Command, _ []string) error {
-	return errors.New("operator binary must be called with one of the subcommands")
+	return errors.New("operator binarysdfsdfsdffs must be called with one of the subcommands")
 }
 
 func main() {
