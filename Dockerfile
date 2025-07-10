@@ -10,7 +10,7 @@ RUN if [ "$DEBUG_TOOLS" = "true" ]; then \
     fi
 
 COPY go.mod go.sum ./
-RUN go mod download -x
+RUN go mod download -x && go mod download -x -t
 
 COPY pkg ./pkg
 COPY cmd ./cmd

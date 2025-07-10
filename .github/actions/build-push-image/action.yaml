@@ -69,8 +69,8 @@ runs:
         platforms: ${{ inputs.platforms }}
         push: true
         tags: ${{ inputs.tags }}
-        # cache-from: type=gha
-        # cache-to: type=gha,mode=max
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         labels: |
           ${{ steps.meta.outputs.labels }}
         annotations: |
