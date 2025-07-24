@@ -24,7 +24,7 @@ jobs:
           echo "Running in job: ${{ matrix.name }}"
           if [ "${{ matrix.name }}" = "job1" ]; then
             echo Setting var in ${{ matrix.name }}
-            echo "special_var=hello-from-job1" >> $GITHUB_OUTPUT
+            # echo "special_var=hello-from-job1" >> $GITHUB_OUTPUT
           fi
 
   echo-output:
