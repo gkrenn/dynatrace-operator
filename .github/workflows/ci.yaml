@@ -31,10 +31,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: matrix-job
     steps:
+      - name: Set Slack message
+        id: set_slack_message
+        run: |
+          if [ "${{ needs.matrix-job.outputs.special_var }}" = "true" ]; then
+            echo "SLACK_MESSAGE=:large_yellow_circle: Some E2E ondemand tests were skipped on ${{ env.branch }} branch (${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) due to cluster creation issues" >> $GITHUB_ENV
+          else
+            echo "SLACK_MESSAGE=:red_circle: E2E ondemand tests failed on ${{ env.branch }} branch (${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_ENV
+          fi
       - name: Echo special_var output
         run: |
-          echo ${{
-              (needs.matrix-job.outputs.special_var == 'true')
-                && '"message": ":large_yellow_circle: E2E ondemand tests were skipped on ' 
-                || '"message": ":red_circle: E2E ondemand tests failed on '
-            }} this client
+          echo Message: ${{ env.SLACK_MESSAGE }}
