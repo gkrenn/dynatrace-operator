@@ -24,7 +24,7 @@ jobs:
           echo "Running in job: ${{ matrix.name }}"
           if [ "${{ matrix.name }}" = "job1" ]; then
             echo Setting var in ${{ matrix.name }}
-            # echo "special_var=hello-from-job1" >> $GITHUB_OUTPUT
+            echo "special_var=true" >> $GITHUB_OUTPUT
           fi
 
   echo-output:
@@ -33,4 +33,8 @@ jobs:
     steps:
       - name: Echo special_var output
         run: |
-          echo "special_var from matrix-job: ${{ needs.matrix-job.outputs.special_var }}"
+          ${{
+              (needs.matrix-job.special_var == 'true')
+                && '"message": ":large_yellow_circle: E2E ondemand tests were skipped on ' 
+                || '"message": ":red_circle: E2E ondemand tests failed on '
+            }} this client
