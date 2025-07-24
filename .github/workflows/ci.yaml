@@ -33,8 +33,8 @@ jobs:
     steps:
       - name: Echo special_var output
         run: |
-          ${{
-              (needs.matrix-job.special_var == 'true')
+          echo ${{
+              (needs.matrix-job.outputs.special_var == 'true')
                 && '"message": ":large_yellow_circle: E2E ondemand tests were skipped on ' 
                 || '"message": ":red_circle: E2E ondemand tests failed on '
             }} this client
