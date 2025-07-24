@@ -14,9 +14,13 @@ jobs:
     outputs:
       special_var: ${{ steps.set_var.outputs.special_var }}
     steps:
-      - name: Set variable only in job2
+      - name: Set variable only in job1
         id: set_var
         run: |
+          if [ "${{ matrix.name }}" = "job2" ]; then
+            echo Job 2 takes longer
+            sleep 10
+          fi
           echo "Running in job: ${{ matrix.name }}"
           if [ "${{ matrix.name }}" = "job1" ]; then
             echo Setting var in ${{ matrix.name }}
