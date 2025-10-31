@@ -17,119 +17,9 @@ permissions:
   checks: write
 
 jobs:
-  run-in-k8s:
-    name: Run in Kubernetes latest (${{ github.event.inputs.target || 'main' }})
-    environment: E2E
-    runs-on:
-      - self-hosted
-      - operator-e2e
-    outputs:
-      cluster_status: ${{ steps.run_e2e_test.outputs.cluster_status }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Run e2e test
-        id: run_e2e_test
-        uses: ./.github/actions/run-e2e
-        with:
-          flc-namespace: dto-daily
-          flc-environment: dto-k8s-latest-flc
-          helm-chart: ${{ github.event.inputs.helm-chart || 'oci://quay.io/dynatrace/dynatrace-operator:0.0.0-nightly-chart' }}
-          target-branch: ${{ github.event.inputs.target }}
-          tenant1-name: ${{ secrets.TENANT1_NAME }}
-          tenant1-apitoken: ${{ secrets.TENANT1_APITOKEN }}
-          tenant1-apitoken-nosettings: ${{ secrets.TENANT1_APITOKEN_NOSETTINGS }}
-          tenant1-dataingesttoken: ${{ secrets.TENANT1_DATAINGESTTOKEN }}
-          tenant1-oauth-client-id: ${{ secrets.TENANT1_OAUTH_CLIENT_ID }}
-          tenant1-oauth-secret: ${{ secrets.TENANT1_OAUTH_SECRET }}
-          tenant1-oauth-urn: ${{ secrets.TENANT1_OAUTH_URN }}
-          tenant2-name: ${{ secrets.TENANT2_NAME }}
-          tenant2-apitoken: ${{ secrets.TENANT2_APITOKEN }}
-          tenant2-dataingesttoken: ${{ secrets.TENANT2_DATAINGESTTOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Determine cluster status
-        if: failure()
-        run: |
-          if [[ "${{ steps.run_e2e_test.outputs.cluster_status }}" == "skipped" ]]; then
-            exit 1
-          fi
-  run-in-ocp:
-    name: Run in OpenShift latest (${{ github.event.inputs.target || 'main' }})
-    environment: E2E
-    runs-on:
-      - self-hosted
-      - operator-e2e
-    outputs:
-      cluster_status: ${{ steps.run_e2e_test.outputs.cluster_status }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Run e2e test
-        id: run_e2e_test
-        uses: ./.github/actions/run-e2e
-        with:
-          flc-namespace: dto-daily
-          flc-environment: dto-ocp-latest-flc
-          helm-chart: ${{ github.event.inputs.helm-chart || 'oci://quay.io/dynatrace/dynatrace-operator:0.0.0-nightly-chart' }}
-          target-branch: ${{ github.event.inputs.target }}
-          tenant1-name: ${{ secrets.TENANT1_NAME }}
-          tenant1-apitoken: ${{ secrets.TENANT1_APITOKEN }}
-          tenant1-apitoken-nosettings: ${{ secrets.TENANT1_APITOKEN_NOSETTINGS }}
-          tenant1-dataingesttoken: ${{ secrets.TENANT1_DATAINGESTTOKEN }}
-          tenant1-oauth-client-id: ${{ secrets.TENANT1_OAUTH_CLIENT_ID }}
-          tenant1-oauth-secret: ${{ secrets.TENANT1_OAUTH_SECRET }}
-          tenant1-oauth-urn: ${{ secrets.TENANT1_OAUTH_URN }}
-          tenant2-name: ${{ secrets.TENANT2_NAME }}
-          tenant2-apitoken: ${{ secrets.TENANT2_APITOKEN }}
-          tenant2-dataingesttoken: ${{ secrets.TENANT2_DATAINGESTTOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Determine cluster status
-        if: failure()
-        run: |
-          if [[ "${{ steps.run_e2e_test.outputs.cluster_status }}" == "skipped" ]]; then
-            exit 1
-          fi
-  run-in-ocp-fips:
-    name: Run in FIPS OpenShift (${{ github.event.inputs.target || 'main' }})
-    environment: E2E
-    runs-on:
-      - self-hosted
-      - operator-e2e
-    outputs:
-      cluster_status: ${{ steps.run_e2e_test.outputs.cluster_status }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - name: Run e2e test
-        id: run_e2e_test
-        uses: ./.github/actions/run-e2e
-        with:
-          flc-namespace: dto-ocp-ondemand
-          flc-environment: dto-ocp-fips
-          helm-chart: ${{ github.event.inputs.helm-chart || 'oci://quay.io/dynatrace/dynatrace-operator:0.0.0-nightly-chart' }}
-          target-image: format('{0}-fips', (${{ github.event.inputs.target || 'main' }}))
-          tenant1-name: ${{ secrets.TENANT1_NAME }}
-          tenant1-apitoken: ${{ secrets.TENANT1_APITOKEN }}
-          tenant1-apitoken-nosettings: ${{ secrets.TENANT1_APITOKEN_NOSETTINGS }}
-          tenant1-dataingesttoken: ${{ secrets.TENANT1_DATAINGESTTOKEN }}
-          tenant1-oauth-client-id: ${{ secrets.TENANT1_OAUTH_CLIENT_ID }}
-          tenant1-oauth-secret: ${{ secrets.TENANT1_OAUTH_SECRET }}
-          tenant1-oauth-urn: ${{ secrets.TENANT1_OAUTH_URN }}
-          tenant2-name: ${{ secrets.TENANT2_NAME }}
-          tenant2-apitoken: ${{ secrets.TENANT2_APITOKEN }}
-          tenant2-dataingesttoken: ${{ secrets.TENANT2_DATAINGESTTOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Determine cluster status
-        if: failure()
-        run: |
-          if [[ "${{ steps.run_e2e_test.outputs.cluster_status }}" == "skipped" ]]; then
-            exit 1
-          fi
-
   notify-slack:
     name: Notify test results in Slack
     environment: E2E
-    needs: [ "run-in-k8s", "run-in-ocp", "run-in-ocp-fips" ]
     runs-on: ubuntu-24.04
     if: ${{ always() }}
     steps:
@@ -152,6 +42,6 @@ jobs:
           OCP_STATUS=$(get_status "${{ needs.run-in-ocp.outputs.cluster_status }}" "${{ needs.run-in-ocp.result }}")
           OCP_FIPS_STATUS=$(get_status "${{ needs.run-in-ocp-fips.outputs.cluster_status }}" "${{ needs.run-in-ocp-fips.result }}")
 
-          MESSAGE="${K8S_STATUS} on kubernetes :kubernetes:\n${OCP_STATUS} on openshift :openshift:\n${OCP_FIPS_STATUS} on FIPS openshift :lock:\nusing ${TARGET_BRANCH} branch (${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          MESSAGE="${K8S_STATUS} on kubernetes :kubernetes:\n${OCP_STATUS} on openshift :openshift:\n${OCP_FIPS_STATUS} on FIPS openshift :lock:\nusing ${{ github.event.inputs.target || 'main' }} branch (${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
           
           echo "$MESSAGE"
