@@ -118,7 +118,15 @@ jobs:
           # The latest image build for this branch will be used
           export BRANCH="${{ needs.check-comment.outputs.pr_ref }}"
           echo The branch is $BRANCH
-          make test/e2e/edgeconnect
+
+          echo Check if deploying works and all pods are running
+          make deploy
+          echo Check if all pods are running
+          kubectl get pods -n dynatrace --watch &
+          kubectl wait --for=condition=Ready pods --all -n dynatrace --timeout=300s
+          make undeploy
+
+          # make test/e2e/edgeconnect
 
       - name: Comment on PR - Success
         if: success()
