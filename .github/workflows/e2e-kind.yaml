@@ -116,9 +116,6 @@ jobs:
         run: |
           # We use the startup script instead of the kind-action to start the cluster to be able to pin the k8s version
           make kind/setup
-
-          # TODO add command to wait till all pods are running
-          kubectl get pods -n kube-system --watch &
           kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=300s
 
       - name: Run E2E tests on kind
@@ -129,13 +126,9 @@ jobs:
           echo The branch is $BRANCH
 
           echo Check if deploying works and all pods are running
-          kubectl get pods -n dynatrace --watch &
-          make deploy
-          echo Check if all pods are running
-          kubectl wait --for=condition=Ready pods --all -n dynatrace --timeout=300s
-          make undeploy
+          kubectl get pods -n dynatrace --watch | sed 's/^/[kind-dynatrace-ns-watcher] /' &
 
-          # make test/e2e/edgeconnect
+          make test/e2e/edgeconnect
 
       - name: Comment on PR - Success
         if: success()
