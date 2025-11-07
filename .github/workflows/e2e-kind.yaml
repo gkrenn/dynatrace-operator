@@ -28,9 +28,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            # When a workflow is triggered by an issue_comment event the ref and sha vars refer
-            # to the base branch and commit of the workflow run, not the pull request's head branch or commit.
-            # Hence we need to explicitly fetch them from the PR details.
+            // When a workflow is triggered by an issue_comment event the ref and sha vars refer
+            // to the base branch and commit of the workflow run, not the pull request's head branch or commit.
+            // Hence we need to explicitly fetch them from the PR details.
 
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
