@@ -7,7 +7,7 @@
 [![Releases](https://img.shields.io/github/downloads/Dynatrace/dynatrace-operator/total.svg)](https://github.com/Dynatrace/dynatrace-operator/releases)
 
 The Dynatrace Operator supports rollout and lifecycle management of various Dynatrace components in Kubernetes and OpenShift.
-
+sdf sdf
 * OneAgent
   * `classicFullStack` rolls out a OneAgent pod per node to monitor pods on it and the node itself
   * `applicationMonitoring` is a webhook based injection mechanism for automatic app-only injection
