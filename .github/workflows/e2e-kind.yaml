@@ -68,12 +68,13 @@ jobs:
       - name: Set up go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
-          go-version-file: "${{ github.workspace }}/target/go.mod"
+          go-version-file: "./target/go.mod"
 
       - name: Set up helm
         uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
         with:
-          # TODO, no longer valid, use latest here. usually we use latest, but 3.18.0 has bug https://github.com/helm/helm/issues/30890
+          # TODO gakr, no longer valid, use latest here.
+          # usually we use latest, but 3.18.0 has bug https://github.com/helm/helm/issues/30890
           version: v3.17.3
           token: ${{ inputs.github-token }}
 
