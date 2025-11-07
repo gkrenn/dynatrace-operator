@@ -113,6 +113,8 @@ jobs:
           make kind/setup
 
           # TODO add command to wait till all pods are running
+          kubectl get pods -n kube-system --watch &
+          kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=300s
 
       - name: Run E2E tests on kind
         id: run-e2e
