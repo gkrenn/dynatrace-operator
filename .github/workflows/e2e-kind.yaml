@@ -80,7 +80,7 @@ jobs:
 
       - name: Store test tenant secrets
         run: |
-          ./github/scripts/setup-test-secrets.sh
+          ./.github/scripts/prepare-e2e-secrets.sh
         env:
           TENANT1_NAME: ${{ secrets.TENANT1_NAME }}
           TENANT1_APITOKEN: ${{ secrets.TENANT1_APITOKEN }}
