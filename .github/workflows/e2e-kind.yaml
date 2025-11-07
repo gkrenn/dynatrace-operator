@@ -74,6 +74,16 @@ jobs:
         with:
           go-version-file: "./go.mod"
 
+      - name: Setup Golang caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-golang-
+
       - name: Set up helm
         uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
         with:
@@ -100,14 +110,14 @@ jobs:
       - name: Start kind cluster
         run: |
           # We use the startup script instead of the kind-action to start the cluster to be able to pin the k8s version
-          export BRANCH="${{ needs.check-comment.outputs.pr_ref }}"
-          echo The branch is $BRANCH
           make kind/setup
 
       - name: Run E2E tests on kind
         id: run-e2e
         run: |
-          # this will use the latest image build for this PR
+          # The latest image build for this branch will be used
+          export BRANCH="${{ needs.check-comment.outputs.pr_ref }}"
+          echo The branch is $BRANCH
           make test/e2e/edgeconnect
 
       - name: Comment on PR - Success
