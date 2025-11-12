@@ -128,7 +128,7 @@ jobs:
           echo Check if deploying works and all pods are running
           kubectl get pods -n dynatrace --watch | sed 's/^/[kind-dynatrace-ns-watcher] /' &
 
-          make test/e2e/edgeconnect
+          make test/e2e/edgeconnect/normal
 
       - name: Comment on PR - Success
         if: success()
