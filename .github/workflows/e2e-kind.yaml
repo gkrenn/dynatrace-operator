@@ -46,15 +46,15 @@ jobs:
     if: needs.check-comment.outputs.triggered == 'true'
     runs-on: ubuntu-24.04
     steps:
-      - name: React to comment
+      - name: Comment with workflow link
         uses: actions/github-script@v7
         with:
           script: |
-            await github.rest.reactions.createForIssueComment({
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: 'rocket'
+              issue_number: context.issue.number,
+              body: `🚀 E2E workflow started! [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\nℹ️ Please note that currently only the edgeconnect tests without a proxy (\`test/e2e/edgeconnect/normal\`) are being run.`
             });
 
       - name: Checkout PR
