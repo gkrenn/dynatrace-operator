@@ -12,44 +12,33 @@ permissions:
 jobs:
   check-comment:
     name: Check for trigger comment
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '/run-e2e-kind')
+    if: github.event.issue.pull_request
     runs-on: ubuntu-24.04
     outputs:
-      triggered: ${{ steps.check.outputs.triggered }}
-      pr_ref: ${{ steps.get-pr.outputs.ref }}
-      pr_sha: ${{ steps.get-pr.outputs.sha }}
+      triggered: ${{ steps.check-comment.outputs.triggered }}
+      detected-command: ${{ steps.check-comment.outputs.detected-command }}
+      pr_ref: ${{ steps.check-comment.outputs.pr_ref }}
+      pr_sha: ${{ steps.check-comment.outputs.pr_sha }}
     steps:
-      - name: Check comment author association
-        id: check
-        run: |
-          # Only allow maintainers (MEMBER, OWNER, COLLABORATOR) to trigger
-          association="${{ github.event.comment.author_association }}"
-          if [[ "$association" == "MEMBER" || "$association" == "OWNER" || "$association" == "COLLABORATOR" ]]; then
-            echo "triggered=true" >> $GITHUB_OUTPUT
-          else
-            echo "triggered=false" >> $GITHUB_OUTPUT
-          fi
-      - name: Get PR details
-        id: get-pr
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+      - name: Check comment and get PR details
+        id: check-comment
+        uses: ./.github/actions/check-comment
         with:
-          script: |
-            // When a workflow is triggered by an issue_comment event the ref and sha vars refer
-            // to the base branch and commit of the workflow run, not the pull request's head branch or commit.
-            // Hence we need to explicitly fetch them from the PR details.
+          allowed-commands: '/run-e2e-kind, other-command'
 
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            core.setOutput('ref', pr.data.head.ref);
-            core.setOutput('sha', pr.data.head.sha);
+  other:
+    name: Run E2E tests on kind
+    needs: check-comment
+    if: needs.check-comment.outputs.triggered == 'true' && needs.check-comment.outputs.detected-command == 'other-command'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Hello world
+        run: echo "This is a placeholder for other-command"
 
   run-e2e-kind:
     name: Run E2E tests on kind
     needs: check-comment
-    if: needs.check-comment.outputs.triggered == 'true'
+    if: needs.check-comment.outputs.triggered == 'true' && needs.check-comment.outputs.detected-command == '/run-e2e-kind'
     runs-on: ubuntu-24.04
     steps:
       - name: Comment with workflow link
