@@ -25,7 +25,7 @@ jobs:
           echo "triggered=true" >> $GITHUB_OUTPUT
       - name: Get PR details
         id: get-pr
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             // When a workflow is triggered by an issue_comment event the ref and sha vars refer
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Comment with workflow link
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             await github.rest.issues.createComment({
