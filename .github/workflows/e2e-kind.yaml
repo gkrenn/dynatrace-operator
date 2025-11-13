@@ -19,10 +19,16 @@ jobs:
       pr_ref: ${{ steps.get-pr.outputs.ref }}
       pr_sha: ${{ steps.get-pr.outputs.sha }}
     steps:
-      - name: Check comment author
+      - name: Check comment author association
         id: check
         run: |
-          echo "triggered=true" >> $GITHUB_OUTPUT
+          # Only allow maintainers (MEMBER, OWNER, COLLABORATOR) to trigger
+          association="${{ github.event.comment.author_association }}"
+          if [[ "$association" == "MEMBER" || "$association" == "OWNER" || "$association" == "COLLABORATOR" ]]; then
+            echo "triggered=true" >> $GITHUB_OUTPUT
+          else
+            echo "triggered=false" >> $GITHUB_OUTPUT
+          fi
       - name: Get PR details
         id: get-pr
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
