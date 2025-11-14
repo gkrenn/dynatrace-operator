@@ -173,7 +173,10 @@ func DeleteTenantConfig(clientSecret tenant.EdgeConnectSecret, edgeConnectTenant
 
 func CheckEcExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *TenantConfig) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		ecClt, err := BuildEcClient(ctx, clientSecret)
+		requestCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		ecClt, err := BuildEcClient(requestCtx, clientSecret)
 		require.NoError(t, err)
 
 		_, err = ecClt.GetEdgeConnect(edgeConnectTenantConfig.ID)
