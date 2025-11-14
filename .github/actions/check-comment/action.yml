@@ -2,7 +2,7 @@ name: 'Check Comment'
 description: 'Checks if a comment contains an allowed command and outputs the detected command, PR ref, and sha.'
 inputs:
   allowed-commands:
-    description: 'Comma-separated list of allowed commands (e.g. /run-e2e-kind,/run-e2e-proxy)'
+    description: 'Comma-separated list of allowed commands (e.g. "/run-e2e-kind, /othercommand")'
     required: true
 runs:
   using: 'composite'
@@ -37,7 +37,7 @@ runs:
             repo: context.repo.repo,
             pull_number: context.issue.number
           });
-          core.setOutput('pr_ref', pr.data.head.ref);
+          core.setOutput('pr_branch', pr.data.head.ref);
           core.setOutput('pr_sha', pr.data.head.sha);
 outputs:
   triggered:
@@ -46,9 +46,9 @@ outputs:
   detected-command:
     description: 'The detected command from the comment'
     value: ${{ steps.check.outputs.detected-command }}
-  pr_ref:
-    description: 'The PR head ref'
-    value: ${{ steps.get-pr.outputs.pr_ref }}
+  pr_branch:
+    description: 'The branch of the PR'
+    value: ${{ steps.get-pr.outputs.pr_branch }}
   pr_sha:
-    description: 'The PR head sha'
+    description: 'The sha of the PR head'
     value: ${{ steps.get-pr.outputs.pr_sha }}
