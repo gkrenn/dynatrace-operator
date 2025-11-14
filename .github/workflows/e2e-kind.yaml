@@ -17,7 +17,7 @@ jobs:
     outputs:
       triggered: ${{ steps.check-comment.outputs.triggered }}
       detected-command: ${{ steps.check-comment.outputs.detected-command }}
-      pr_ref: ${{ steps.check-comment.outputs.pr_ref }}
+      pr_branch: ${{ steps.check-comment.outputs.pr_branch }}
       pr_sha: ${{ steps.check-comment.outputs.pr_sha }}
     steps:
       - name: Checkout
@@ -26,16 +26,7 @@ jobs:
         id: check-comment
         uses: ./.github/actions/check-comment
         with:
-          allowed-commands: '/run-e2e-kind, other-command'
-
-  other:
-    name: Run E2E tests on kind
-    needs: check-comment
-    if: needs.check-comment.outputs.triggered == 'true' && needs.check-comment.outputs.detected-command == 'other-command'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Hello world
-        run: echo "This is a placeholder for other-command"
+          allowed-commands: '/run-e2e-kind'
 
   run-e2e-kind:
     name: Run E2E tests on kind
@@ -90,7 +81,7 @@ jobs:
       - name: Check and wait for image availability
         run: |
           IMAGE="dynatrace/dynatrace-operator"
-          TAG="snapshot-$(hack/build/ci/sanitize-branch-name.sh "${{ needs.check-comment.outputs.pr_ref }}")"
+          TAG="snapshot-$(hack/build/ci/sanitize-branch-name.sh "${{ needs.check-comment.outputs.pr_branch }}")"
 
           ./hack/build/ci/check-image-available.sh "$IMAGE" "$TAG"
       - name: Start kind cluster
@@ -102,7 +93,7 @@ jobs:
         id: run-e2e
         run: |
           # The latest image build for this branch will be used
-          export BRANCH="${{ needs.check-comment.outputs.pr_ref }}"
+          export BRANCH="${{ needs.check-comment.outputs.pr_branch }}"
           echo The branch is $BRANCH
 
           make test/e2e/edgeconnect/normal
