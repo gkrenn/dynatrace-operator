@@ -15,7 +15,7 @@ The Dynatrace Operator supports rollout and lifecycle management of various Dyna
   * `hostMonitoring` is only monitoring the hosts (i.e. nodes) in the cluster without app-only injection
     * CSI Driver is used to provide a writeable volume for the Oneagent as it's running in read-only mode
   * `cloudNativeFullStack` is a combination of `applicationMonitoring` and `hostMonitoring`
-    * CSI Driver is used for both features
+    * CSI Driver is used for both features 
 * ActiveGate
   * `routing` routes OneAgent traffic through the ActiveGate
   * `kubernetes-monitoring` allows monitoring of the Kubernetes API
