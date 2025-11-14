@@ -217,44 +217,32 @@ func (c *client) getSettingsAPIResponseData(response *http.Response) ([]byte, er
 
 // GetEdgeConnect returns edge connect if it exists
 func (c *client) GetEdgeConnect(edgeConnectID string) (GetResponse, error) {
-	fmt.Println("[DEBUG] GetEdgeConnect called with edgeConnectID:", edgeConnectID)
 	edgeConnectURL := c.getEdgeConnectURL(edgeConnectID)
-	fmt.Println("[DEBUG] Computed edgeConnectURL:", edgeConnectURL)
 
 	req, err := http.NewRequestWithContext(c.ctx, http.MethodGet, edgeConnectURL, nil)
 	if err != nil {
-		fmt.Println("[DEBUG] Error creating HTTP request:", err)
 		return GetResponse{}, err
 	}
 
-	fmt.Println("[DEBUG] HTTP request created:", req)
 	resp, err := c.httpClient.Do(req)
-	fmt.Println("[DEBUG] HTTP request sent, got response:", resp, "error:", err)
 	defer utils.CloseBodyAfterRequest(resp)
 
 	if err != nil {
-		fmt.Println("[DEBUG] Error from httpClient.Do:", err)
 		return GetResponse{}, err
 	}
 
-	fmt.Println("[DEBUG] Response status code:", resp.StatusCode)
 	responseData, err := c.getServerResponseData(resp)
-	fmt.Println("[DEBUG] getServerResponseData returned, data length:", len(responseData), "error:", err)
 	if err != nil {
-		fmt.Println("[DEBUG] Error from getServerResponseData:", err)
 		return GetResponse{}, err
 	}
 
 	response := GetResponse{}
 
 	err = json.Unmarshal(responseData, &response)
-	fmt.Println("[DEBUG] json.Unmarshal called, error:", err)
 	if err != nil {
-		fmt.Println("[DEBUG] Error unmarshalling responseData:", err)
 		return GetResponse{}, err
 	}
 
-	fmt.Printf("[DEBUG] Returning response: %+v\n", response)
 	return response, nil
 }
 
