@@ -173,7 +173,8 @@ func DeleteTenantConfig(clientSecret tenant.EdgeConnectSecret, edgeConnectTenant
 
 func CheckEcExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *TenantConfig) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		ecClt, err := BuildEcClient(ctx, clientSecret)
+		// Use context.Background() to avoid test framework context timeout issues
+		ecClt, err := BuildEcClient(context.Background(), clientSecret)
 		require.NoError(t, err)
 
 		const maxRetries = 5
