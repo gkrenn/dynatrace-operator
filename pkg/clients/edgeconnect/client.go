@@ -51,7 +51,7 @@ func NewClient(clientID, clientSecret string, options ...Option) (Client, error)
 	if httpClient == nil {
 		return nil, errors.New("can't create http client for edge connect")
 	}
-	httpClient.Timeout = 10 * time.Second
+	httpClient.Timeout = 320 * time.Second
 
 	if c.customCA != nil {
 		rootCAs, err := x509.SystemCertPool()
