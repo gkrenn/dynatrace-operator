@@ -1,0 +1,195 @@
+name: Tenant API Connectivity Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      timeout:
+        description: 'Request timeout in seconds'
+        required: false
+        default: '30'
+      interval:
+        description: 'Interval between checks in seconds'
+        required: false
+        default: '1'
+      duration:
+        description: 'Total duration to run checks in minutes'
+        required: false
+        default: '30'
+
+permissions:
+  contents: read
+
+jobs:
+  connectivity-check:
+    name: Check Tenant API Connectivity
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install network diagnostic tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y traceroute mtr-tiny curl jq
+
+      - name: Run connectivity checks
+        id: connectivity-check
+        env:
+          TENANT1_NAME: ${{ secrets.TENANT1_NAME }}
+          TENANT_API_TOKEN: ${{ secrets.TENANT1_APITOKEN }}
+          REQUEST_TIMEOUT: ${{ github.event.inputs.timeout || '30' }}
+          CHECK_INTERVAL: ${{ github.event.inputs.interval || '60' }}
+          CHECK_DURATION: ${{ github.event.inputs.duration || '30' }}
+        run: |
+          set +e  # Don't exit on error, we want to handle failures
+
+          TENANT_API_URL="https://${TENANT1_NAME}.dev.dynatracelabs.com/api/v1/deployment/image/gateway/latest"
+          TENANT_HOST="${TENANT1_NAME}.dev.dynatracelabs.com"
+          echo "Tenant API URL: $TENANT_API_URL"
+          echo "Tenant host: $TENANT_HOST"
+
+          END_TIME=$((SECONDS + CHECK_DURATION * 60))
+          CHECK_COUNT=0
+          FAILURE_COUNT=0
+          SUCCESS_COUNT=0
+
+          mkdir -p results
+
+          echo "Starting connectivity checks for ${CHECK_DURATION} minutes..."
+          echo "Timeout: ${REQUEST_TIMEOUT}s, Interval: ${CHECK_INTERVAL}s"
+          echo ""
+
+          while [ $SECONDS -lt $END_TIME ]; do
+            CHECK_COUNT=$((CHECK_COUNT + 1))
+            TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            
+            echo "=== Check #${CHECK_COUNT} at ${TIMESTAMP} ==="
+            
+            # Perform the API request with timeout
+            HTTP_RESPONSE=$(curl -s -w "\n%{http_code}\n%{time_total}" \
+              --max-time "${REQUEST_TIMEOUT}" \
+              -X 'GET' \
+              "${TENANT_API_URL}" \
+              -H 'accept: application/json' \
+              -H "Authorization: Api-Token ${TENANT_API_TOKEN}" \
+              2>&1)
+            
+            CURL_EXIT_CODE=$?
+            
+            if [ $CURL_EXIT_CODE -eq 0 ]; then
+              HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n 2 | head -n 1)
+              RESPONSE_TIME=$(echo "$HTTP_RESPONSE" | tail -n 1)
+              
+              if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+                SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+                echo "✅ SUCCESS - HTTP ${HTTP_CODE} - Response time: ${RESPONSE_TIME}s"
+              else
+                FAILURE_COUNT=$((FAILURE_COUNT + 1))
+                echo "❌ FAILED - HTTP ${HTTP_CODE} - Response time: ${RESPONSE_TIME}s"
+                echo "$HTTP_RESPONSE" >> "results/failed_responses.log"
+              fi
+            else
+              FAILURE_COUNT=$((FAILURE_COUNT + 1))
+              echo "❌ REQUEST FAILED - curl exit code: $CURL_EXIT_CODE"
+              
+              # Interpret curl exit codes
+              case $CURL_EXIT_CODE in
+                6)  echo "   Error: Could not resolve host" ;;
+                7)  echo "   Error: Failed to connect to host" ;;
+                28) echo "   Error: Operation timed out" ;;
+                35) echo "   Error: SSL connect error" ;;
+                52) echo "   Error: Empty reply from server" ;;
+                56) echo "   Error: Failure in receiving network data" ;;
+                *)  echo "   Error: Unknown error (exit code: $CURL_EXIT_CODE)" ;;
+              esac
+              
+              echo ""
+              echo "🔍 Running network diagnostics..."
+              echo ""
+              
+              # DNS lookup
+              echo "--- DNS Lookup ---"
+              nslookup "$TENANT_HOST" 2>&1 | tee -a "results/dns_lookup_${CHECK_COUNT}.log"
+              echo ""
+              
+              # Traceroute
+              echo "--- Traceroute to ${TENANT_HOST} ---"
+              traceroute -m 30 -w 2 "$TENANT_HOST" 2>&1 | tee -a "results/traceroute_${CHECK_COUNT}.log"
+              echo ""
+              
+              # MTR report (more detailed than traceroute)
+              echo "--- MTR Report ---"
+              mtr --report --report-cycles 5 "$TENANT_HOST" 2>&1 | tee -a "results/mtr_${CHECK_COUNT}.log"
+              echo ""
+              
+              # TCP connection test on port 443
+              echo "--- TCP Connection Test (port 443) ---"
+              timeout 10 bash -c "echo >/dev/tcp/${TENANT_HOST}/443" 2>&1 && echo "TCP connection: SUCCESS" || echo "TCP connection: FAILED"
+              echo ""
+              
+              # Save failure details
+              {
+                echo "=== Failure at ${TIMESTAMP} ==="
+                echo "Check number: ${CHECK_COUNT}"
+                echo "Curl exit code: ${CURL_EXIT_CODE}"
+                echo "Response: ${HTTP_RESPONSE}"
+                echo ""
+              } >> "results/failure_details.log"
+            fi
+            
+            echo ""
+            
+            # Wait for next check (unless we've exceeded duration)
+            if [ $SECONDS -lt $END_TIME ]; then
+              REMAINING=$((END_TIME - SECONDS))
+              SLEEP_TIME=$((CHECK_INTERVAL < REMAINING ? CHECK_INTERVAL : REMAINING))
+              if [ $SLEEP_TIME -gt 0 ]; then
+                echo "Sleeping for ${SLEEP_TIME}s before next check..."
+                sleep "$SLEEP_TIME"
+              fi
+            fi
+          done
+
+          echo ""
+          echo "========================================="
+          echo "           SUMMARY"
+          echo "========================================="
+          echo "Total checks: ${CHECK_COUNT}"
+          echo "Successful: ${SUCCESS_COUNT}"
+          echo "Failed: ${FAILURE_COUNT}"
+          echo "Success rate: $(echo "scale=2; ${SUCCESS_COUNT} * 100 / ${CHECK_COUNT}" | bc)%"
+          echo "========================================="
+
+          # Save summary
+          {
+            echo "Connectivity Check Summary"
+            echo "=========================="
+            echo "Start time: $(date -u)"
+            echo "Total checks: ${CHECK_COUNT}"
+            echo "Successful: ${SUCCESS_COUNT}"
+            echo "Failed: ${FAILURE_COUNT}"
+            echo "Success rate: $(echo "scale=2; ${SUCCESS_COUNT} * 100 / ${CHECK_COUNT}" | bc)%"
+          } > "results/summary.txt"
+
+          # Set output for job status
+          if [ $FAILURE_COUNT -gt 0 ]; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+            echo "failure_count=${FAILURE_COUNT}" >> $GITHUB_OUTPUT
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload diagnostic results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connectivity-check-results-${{ github.run_id }}
+          path: results/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Report status
+        if: steps.connectivity-check.outputs.has_failures == 'true'
+        run: |
+          echo "::warning::Connectivity issues detected! ${FAILURE_COUNT} request(s) failed. Check the uploaded artifacts for diagnostic details."
+          exit 1
