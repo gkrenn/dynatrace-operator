@@ -86,6 +86,7 @@ jobs:
           ./hack/build/ci/check-image-available.sh "$IMAGE" "$TAG"
       - name: Start kind cluster
         run: |
+          ip link show # TODO gakr remove
           # We use the startup script instead of the kind-action to start the cluster to be able to pin the k8s version
           make kind/setup
           kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=300s
