@@ -53,21 +53,6 @@ func NewClient(clientID, clientSecret string, options ...Option) (Client, error)
 	}
 	httpClient.Timeout = 30 * time.Second
 
-	// Configure the underlying transport
-	ot, ok := httpClient.Transport.(*oauth2.Transport)
-	if !ok {
-		return nil, errors.New("unexpected transport type")
-	}
-
-	// Ensure we have a base transport with proper configuration
-	if ot.Base == nil {
-		ot.Base = &http.Transport{
-			DisableKeepAlives: true, // Force fresh connections to avoid pool exhaustion
-		}
-	} else if t, ok := ot.Base.(*http.Transport); ok {
-		t.DisableKeepAlives = true
-	}
-
 	if c.customCA != nil {
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil {
@@ -76,6 +61,11 @@ func NewClient(clientID, clientSecret string, options ...Option) (Client, error)
 
 		if ok := rootCAs.AppendCertsFromPEM(c.customCA); !ok {
 			return nil, errors.New("append custom certs")
+		}
+
+		ot := httpClient.Transport.(*oauth2.Transport)
+		if ot.Base == nil {
+			ot.Base = &http.Transport{}
 		}
 
 		t := ot.Base.(*http.Transport)

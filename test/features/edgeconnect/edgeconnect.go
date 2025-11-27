@@ -39,23 +39,17 @@ func NormalModeFeature(t *testing.T) features.Feature {
 	builder := features.New("edgeconnect-install")
 
 	secretConfig := tenant.GetEdgeConnectTenantSecret(t)
-	fmt.Println("hello world")
 
-	// for testing, just request the edgeconnect info for 8575f749-5738-493e-b091-3b1a75ebdeb4 100 times => the request should not get stuck
-	for i := 0; i < 100; i++ {
-		fmt.Printf("EdgeConnect connectivity check %d/100\n", i+1)
-		err := ecComponents.ImmediateCheckEcExistsOnTheTenant(secretConfig, &ecComponents.TenantConfig{ID: "8575f749-5738-493e-b091-3b1a75ebdeb4"})
-		if err != nil {
-			t.Fatalf("EdgeConnect connectivity check failed at attempt %d: %v", i+1, err)
-		}
-	}
+	// Create a single EdgeConnect client to be reused throughout the test
+	ecClient, err := ecComponents.BuildEcClient(secretConfig)
+	require.NoError(t, err)
 
 	edgeConnectTenantConfig := &ecComponents.TenantConfig{}
 
 	testECname := uuid.NewString()
 	testHostPattern := fmt.Sprintf("%s.e2eTestHostPattern.internal.org", testECname)
 
-	builder.Assess("create EC configuration on the tenant", ecComponents.CreateTenantConfig(testECname, secretConfig, edgeConnectTenantConfig, testHostPattern))
+	builder.Assess("create EC configuration on the tenant", ecComponents.CreateTenantConfig(ecClient, testECname, secretConfig, edgeConnectTenantConfig, testHostPattern))
 
 	testEdgeConnect := *ecComponents.New(
 		// this tenantConfigName should match with tenant edgeConnect tenantConfigName
@@ -71,12 +65,12 @@ func NormalModeFeature(t *testing.T) features.Feature {
 
 	ecComponents.Install(builder, helpers.LevelAssess, nil, testEdgeConnect)
 
-	builder.Assess("check EC configasdfasdfsafuration on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check EC configuration on the tenant", ecComponents.CheckEcExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
 	builder.Assess("delete EdgeConnect CR", ecComponents.Delete(testEdgeConnect))
-	builder.Assess("check if EC configuration is deleted on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check if EC configuration is deleted on the tenant", ecComponents.CheckEcExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
 
 	builder.Teardown(tenant.DeleteTenantSecret(ecComponents.BuildOAuthClientSecretName(testEdgeConnect.Name), testEdgeConnect.Namespace))
-	builder.Teardown(ecComponents.DeleteTenantConfig(secretConfig, edgeConnectTenantConfig))
+	builder.Teardown(ecComponents.DeleteTenantConfig(ecClient, edgeConnectTenantConfig))
 
 	return builder.Feature()
 }
@@ -85,6 +79,10 @@ func ProvisionerModeFeature(t *testing.T) features.Feature {
 	builder := features.New("edgeconnect-install-provisioner")
 
 	secretConfig := tenant.GetEdgeConnectTenantSecret(t)
+
+	// Create a single EdgeConnect client to be reused throughout the test
+	ecClient, err := ecComponents.BuildEcClient(secretConfig)
+	require.NoError(t, err)
 
 	edgeConnectTenantConfig := &ecComponents.TenantConfig{}
 
@@ -104,15 +102,15 @@ func ProvisionerModeFeature(t *testing.T) features.Feature {
 
 	ecComponents.Install(builder, helpers.LevelAssess, &secretConfig, testEdgeConnect)
 
-	builder.Assess("get tenant config", getTenantConfig(testECname, secretConfig, edgeConnectTenantConfig))
+	builder.Assess("get tenant config", getTenantConfig(ecClient, testECname, edgeConnectTenantConfig))
 	builder.Assess("get EC status", ecComponents.Get(&testEdgeConnect))
 
-	builder.Assess("check if EC configuration exists on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
-	builder.Assess("check hostPatterns on the tenant - testHostPattern", checkHostPatternOnTheTenant(secretConfig, edgeConnectTenantConfig, func() string { return testHostPattern }))
+	builder.Assess("check if EC configuration exists on the tenant", ecComponents.CheckEcExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
+	builder.Assess("check hostPatterns on the tenant - testHostPattern", checkHostPatternOnTheTenant(ecClient, edgeConnectTenantConfig, func() string { return testHostPattern }))
 	builder.Assess("update hostPatterns", updateHostPatterns(&testEdgeConnect, testHostPattern2))
-	builder.Assess("check hostPatterns on the tenant - testHostPattern2", checkHostPatternOnTheTenant(secretConfig, edgeConnectTenantConfig, func() string { return testHostPattern2 }))
+	builder.Assess("check hostPatterns on the tenant - testHostPattern2", checkHostPatternOnTheTenant(ecClient, edgeConnectTenantConfig, func() string { return testHostPattern2 }))
 	builder.Assess("delete EC custom resource", ecComponents.Delete(testEdgeConnect))
-	builder.Assess("check if EC configuration is deleted on the tenant", checkEcNotExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check if EC configuration is deleted on the tenant", checkEcNotExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
 
 	builder.Teardown(tenant.DeleteTenantSecret(ecComponents.BuildOAuthClientSecretName(testEdgeConnect.Name), testEdgeConnect.Namespace))
 
@@ -136,6 +134,10 @@ func WithHTTPProxy(t *testing.T) features.Feature {
 	})
 
 	secretConfig := tenant.GetEdgeConnectTenantSecret(t)
+
+	// Create a single EdgeConnect client to be reused throughout the test
+	ecClient, err := ecComponents.BuildEcClient(secretConfig)
+	require.NoError(t, err)
 
 	edgeConnectTenantConfig := &ecComponents.TenantConfig{}
 
@@ -163,11 +165,11 @@ func WithHTTPProxy(t *testing.T) features.Feature {
 
 	ecComponents.Install(builder, helpers.LevelAssess, &secretConfig, testEdgeConnect)
 
-	builder.Assess("get tenant config", getTenantConfig(testECname, secretConfig, edgeConnectTenantConfig))
+	builder.Assess("get tenant config", getTenantConfig(ecClient, testECname, edgeConnectTenantConfig))
 	builder.Assess("get EC status", ecComponents.Get(&testEdgeConnect))
-	builder.Assess("check if EC configuration exists on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check if EC configuration exists on the tenant", ecComponents.CheckEcExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
 	builder.Assess("delete EC custom resource", ecComponents.Delete(testEdgeConnect))
-	builder.Assess("check if EC configuration is deleted on the tenant", checkEcNotExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check if EC configuration is deleted on the tenant", checkEcNotExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
 
 	builder.Teardown(tenant.DeleteTenantSecret(ecComponents.BuildOAuthClientSecretName(testEdgeConnect.Name), testEdgeConnect.Namespace))
 
@@ -191,6 +193,10 @@ func WithHTTPSProxy(t *testing.T) features.Feature {
 	})
 
 	secretConfig := tenant.GetEdgeConnectTenantSecret(t)
+
+	// Create a single EdgeConnect client to be reused throughout the test
+	ecClient, err := ecComponents.BuildEcClient(secretConfig)
+	require.NoError(t, err)
 
 	edgeConnectTenantConfig := &ecComponents.TenantConfig{}
 
@@ -230,11 +236,11 @@ func WithHTTPSProxy(t *testing.T) features.Feature {
 
 	ecComponents.Install(builder, helpers.LevelAssess, &secretConfig, testEdgeConnect)
 
-	builder.Assess("get tenant config", getTenantConfig(testECname, secretConfig, edgeConnectTenantConfig))
+	builder.Assess("get tenant config", getTenantConfig(ecClient, testECname, edgeConnectTenantConfig))
 	builder.Assess("get EC status", ecComponents.Get(&testEdgeConnect))
-	builder.Assess("check if EC configuration exists on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check if EC configuration exists on the tenant", ecComponents.CheckEcExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
 	builder.Assess("delete EC custom resource", ecComponents.Delete(testEdgeConnect))
-	builder.Assess("check if EC configuration is deleted on the tenant", checkEcNotExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check if EC configuration is deleted on the tenant", checkEcNotExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
 
 	builder.Teardown(tenant.DeleteTenantSecret(ecComponents.BuildOAuthClientSecretName(testEdgeConnect.Name), testEdgeConnect.Namespace))
 
@@ -251,6 +257,10 @@ func AutomationModeFeature(t *testing.T) features.Feature {
 	builder := features.New("edgeconnect-install-k8s-automation")
 
 	secretConfig := tenant.GetEdgeConnectTenantSecret(t)
+
+	// Create a single EdgeConnect client to be reused throughout the test
+	ecClient, err := ecComponents.BuildEcClient(secretConfig)
+	require.NoError(t, err)
 
 	edgeConnectTenantConfig := &ecComponents.TenantConfig{}
 	testECname := uuid.NewString()
@@ -270,18 +280,18 @@ func AutomationModeFeature(t *testing.T) features.Feature {
 
 	ecComponents.Install(builder, helpers.LevelAssess, &secretConfig, testEdgeConnect)
 
-	builder.Assess("get tenant config", getTenantConfig(testECname, secretConfig, edgeConnectTenantConfig))
+	builder.Assess("get tenant config", getTenantConfig(ecClient, testECname, edgeConnectTenantConfig))
 	builder.Assess("get EC status", ecComponents.Get(&testEdgeConnect))
 
-	builder.Assess("check if EC configuration exists on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check if EC configuration exists on the tenant", ecComponents.CheckEcExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
 	// k8sautomation.HostPattern has to be executed when the test is running and testEdgeConnect.Status contains real data
-	builder.Assess("check hostPatterns - k8s automation", checkHostPatternOnTheTenant(secretConfig, edgeConnectTenantConfig, func() string { //nolint
+	builder.Assess("check hostPatterns - k8s automation", checkHostPatternOnTheTenant(ecClient, edgeConnectTenantConfig, func() string { //nolint
 		return testEdgeConnect.K8sAutomationHostPattern()
 	}))
-	builder.Assess("check if settings object exists on the tenant", checkSettingsExistsOnTheTenant(secretConfig, &testEdgeConnect))
+	builder.Assess("check if settings object exists on the tenant", checkSettingsExistsOnTheTenant(ecClient, &testEdgeConnect))
 	builder.Assess("delete EC custom resource", ecComponents.Delete(testEdgeConnect))
-	builder.Assess("check if EC configuration is deleted on the tenant", checkEcNotExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
-	builder.Assess("check if settings object is deleted on the tenant", checkSettingsNotExistsOnTheTenant(secretConfig, &testEdgeConnect))
+	builder.Assess("check if EC configuration is deleted on the tenant", checkEcNotExistsOnTheTenant(ecClient, edgeConnectTenantConfig))
+	builder.Assess("check if settings object is deleted on the tenant", checkSettingsNotExistsOnTheTenant(ecClient, &testEdgeConnect))
 
 	builder.Teardown(tenant.DeleteTenantSecret(ecComponents.BuildOAuthClientSecretName(testEdgeConnect.Name), testEdgeConnect.Namespace))
 	builder.Teardown(deleteServiceAccount())
@@ -290,13 +300,9 @@ func AutomationModeFeature(t *testing.T) features.Feature {
 }
 
 // getTenantConfig for Provisioner and K8SAutomation modes, preserves the id of EdgeConnect configuration on the tenant
-func getTenantConfig(ecName string, clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *ecComponents.TenantConfig) features.Func {
+func getTenantConfig(ecClient edgeconnectClient.Client, ecName string, edgeConnectTenantConfig *ecComponents.TenantConfig) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		// Use context.Background() to avoid test framework context timeout issues
-		ecClt, err := ecComponents.BuildEcClient(context.Background(), clientSecret)
-		require.NoError(t, err)
-
-		ecs, err := ecClt.GetEdgeConnects(ecName)
+		ecs, err := ecClient.GetEdgeConnects(ecName)
 		require.NoError(t, err)
 
 		assert.LessOrEqual(t, len(ecs.EdgeConnects), 1, "Found multiple EdgeConnect objects with the same tenantConfigName", "count", ecs.EdgeConnects)
@@ -313,13 +319,9 @@ func getTenantConfig(ecName string, clientSecret tenant.EdgeConnectSecret, edgeC
 	}
 }
 
-func checkHostPatternOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *ecComponents.TenantConfig, hostPattern func() string) features.Func {
+func checkHostPatternOnTheTenant(ecClient edgeconnectClient.Client, edgeConnectTenantConfig *ecComponents.TenantConfig, hostPattern func() string) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		// Use context.Background() to avoid test framework context timeout issues
-		ecClt, err := ecComponents.BuildEcClient(context.Background(), clientSecret)
-		require.NoError(t, err)
-
-		ec, err := ecClt.GetEdgeConnect(edgeConnectTenantConfig.ID)
+		ec, err := ecClient.GetEdgeConnect(edgeConnectTenantConfig.ID)
 		require.NoError(t, err)
 
 		host := hostPattern()
@@ -329,13 +331,9 @@ func checkHostPatternOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConn
 	}
 }
 
-func checkEcNotExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *ecComponents.TenantConfig) features.Func {
+func checkEcNotExistsOnTheTenant(ecClient edgeconnectClient.Client, edgeConnectTenantConfig *ecComponents.TenantConfig) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		// Use context.Background() to avoid test framework context timeout issues
-		ecClt, err := ecComponents.BuildEcClient(context.Background(), clientSecret)
-		require.NoError(t, err)
-
-		_, err = ecClt.GetEdgeConnect(edgeConnectTenantConfig.ID)
+		_, err := ecClient.GetEdgeConnect(edgeConnectTenantConfig.ID)
 		// err.Message: Unknown key: eb27ac05-c0c7-4d88-9bb1-804b39e3429b
 		// err.Code: 404
 		require.Error(t, err)
@@ -344,15 +342,11 @@ func checkEcNotExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConn
 	}
 }
 
-func checkSettingsExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, testEdgeConnect *edgeconnect.EdgeConnect) features.Func {
+func checkSettingsExistsOnTheTenant(ecClient edgeconnectClient.Client, testEdgeConnect *edgeconnect.EdgeConnect) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		// Use context.Background() to avoid test framework context timeout issues
-		ecClt, err := ecComponents.BuildEcClient(context.Background(), clientSecret)
-		require.NoError(t, err)
-
 		require.NotEmpty(t, testEdgeConnect.Status.KubeSystemUID)
 
-		envSetting, err := controller.GetConnectionSetting(ecClt, testEdgeConnect.Name, testEdgeConnect.Namespace, testEdgeConnect.Status.KubeSystemUID)
+		envSetting, err := controller.GetConnectionSetting(ecClient, testEdgeConnect.Name, testEdgeConnect.Namespace, testEdgeConnect.Status.KubeSystemUID)
 		require.NoError(t, err)
 
 		assert.Equal(t, testEdgeConnect.Name, envSetting.Value.Name)
@@ -362,15 +356,11 @@ func checkSettingsExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, testE
 	}
 }
 
-func checkSettingsNotExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, testEdgeConnect *edgeconnect.EdgeConnect) features.Func {
+func checkSettingsNotExistsOnTheTenant(ecClient edgeconnectClient.Client, testEdgeConnect *edgeconnect.EdgeConnect) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		// Use context.Background() to avoid test framework context timeout issues
-		ecClt, err := ecComponents.BuildEcClient(context.Background(), clientSecret)
-		require.NoError(t, err)
-
 		require.NotEmpty(t, testEdgeConnect.Status.KubeSystemUID)
 
-		se, err := controller.GetConnectionSetting(ecClt, testEdgeConnect.Name, testEdgeConnect.Namespace, testEdgeConnect.Status.KubeSystemUID)
+		se, err := controller.GetConnectionSetting(ecClient, testEdgeConnect.Name, testEdgeConnect.Namespace, testEdgeConnect.Status.KubeSystemUID)
 		require.NoError(t, err)
 		assert.Equal(t, edgeconnectClient.EnvironmentSetting{}, se)
 

@@ -108,15 +108,12 @@ func WaitForPhase(edgeConnect edgeconnect.EdgeConnect, phase status.DeploymentPh
 }
 
 // CreateTenantConfig for Normal mode only, preserves the ID and OAuth Secret of EdgeConnect configuration on the tenant
-func CreateTenantConfig(ecName string, clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *TenantConfig, testHostPattern string) features.Func {
+func CreateTenantConfig(ecClient edgeconnectClient.Client, ecName string, clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *TenantConfig, testHostPattern string) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		ecClt, err := BuildEcClient(ctx, clientSecret)
-		require.NoError(t, err)
-
 		edgeConnectRequest := edgeconnectClient.NewRequest(ecName, []string{testHostPattern}, []edgeconnect.HostMapping{}, "")
 		edgeConnectRequest.ManagedByDynatraceOperator = false
 
-		res, err := ecClt.CreateEdgeConnect(edgeConnectRequest)
+		res, err := ecClient.CreateEdgeConnect(edgeConnectRequest)
 		require.NoError(t, err)
 		assert.Equal(t, ecName, res.Name)
 
@@ -132,7 +129,7 @@ func CreateTenantConfig(ecName string, clientSecret tenant.EdgeConnectSecret, ed
 	}
 }
 
-func BuildEcClient(ctx context.Context, secret tenant.EdgeConnectSecret) (edgeconnectClient.Client, error) {
+func BuildEcClient(secret tenant.EdgeConnectSecret) (edgeconnectClient.Client, error) {
 	clt, err := edgeconnectClient.NewClient(
 		secret.OauthClientID,
 		secret.OauthClientSecret,
@@ -146,7 +143,7 @@ func BuildEcClient(ctx context.Context, secret tenant.EdgeConnectSecret) (edgeco
 			"settings:objects:read",
 			"settings:objects:write",
 		}),
-		edgeconnectClient.WithContext(ctx),
+		edgeconnectClient.WithContext(context.Background()),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -159,29 +156,22 @@ func BuildOAuthClientSecretName(secretName string) string {
 	return fmt.Sprintf("client-secret-%s", secretName)
 }
 
-func DeleteTenantConfig(clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *TenantConfig) features.Func {
+func DeleteTenantConfig(ecClient edgeconnectClient.Client, edgeConnectTenantConfig *TenantConfig) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		ecClt, err := BuildEcClient(ctx, clientSecret)
-		require.NoError(t, err)
-
-		err = ecClt.DeleteEdgeConnect(edgeConnectTenantConfig.ID)
+		err := ecClient.DeleteEdgeConnect(edgeConnectTenantConfig.ID)
 		require.NoError(t, err)
 
 		return ctx
 	}
 }
 
-func CheckEcExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *TenantConfig) features.Func {
+func CheckEcExistsOnTheTenant(ecClient edgeconnectClient.Client, edgeConnectTenantConfig *TenantConfig) features.Func {
 	return func(ctx context.Context, t *testing.T, envConfig *envconf.Config) context.Context {
-		// Use context.Background() to avoid test framework context timeout issues
-		ecClt, err := BuildEcClient(context.Background(), clientSecret)
-		require.NoError(t, err)
-
 		const maxRetries = 5
 		var lastErr error
 
 		for attempt := 1; attempt <= maxRetries; attempt++ {
-			_, err = ecClt.GetEdgeConnect(edgeConnectTenantConfig.ID)
+			_, err := ecClient.GetEdgeConnect(edgeConnectTenantConfig.ID)
 			if err == nil {
 				return ctx
 			}
@@ -204,12 +194,7 @@ func CheckEcExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnect
 	}
 }
 
-func ImmediateCheckEcExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *TenantConfig) error {
-	ecClt, err := BuildEcClient(context.TODO(), clientSecret)
-	if err != nil {
-		return err
-	}
-
-	_, err = ecClt.GetEdgeConnect(edgeConnectTenantConfig.ID)
+func ImmediateCheckEcExistsOnTheTenant(ecClient edgeconnectClient.Client, edgeConnectTenantConfig *TenantConfig) error {
+	_, err := ecClient.GetEdgeConnect(edgeConnectTenantConfig.ID)
 	return err
 }
