@@ -39,6 +39,16 @@ func NormalModeFeature(t *testing.T) features.Feature {
 	builder := features.New("edgeconnect-install")
 
 	secretConfig := tenant.GetEdgeConnectTenantSecret(t)
+	fmt.Println("hello world")
+
+	// for testing, just request the edgeconnect info for 8575f749-5738-493e-b091-3b1a75ebdeb4 100 times => the request should not get stuck
+	for i := 0; i < 100; i++ {
+		fmt.Printf("EdgeConnect connectivity check %d/100\n", i+1)
+		err := ecComponents.ImmediateCheckEcExistsOnTheTenant(secretConfig, &ecComponents.TenantConfig{ID: "8575f749-5738-493e-b091-3b1a75ebdeb4"})
+		if err != nil {
+			t.Fatalf("EdgeConnect connectivity check failed at attempt %d: %v", i+1, err)
+		}
+	}
 
 	edgeConnectTenantConfig := &ecComponents.TenantConfig{}
 
@@ -61,7 +71,7 @@ func NormalModeFeature(t *testing.T) features.Feature {
 
 	ecComponents.Install(builder, helpers.LevelAssess, nil, testEdgeConnect)
 
-	builder.Assess("check EC configuration on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
+	builder.Assess("check EC configasdfasdfsafuration on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
 	builder.Assess("delete EdgeConnect CR", ecComponents.Delete(testEdgeConnect))
 	builder.Assess("check if EC configuration is deleted on the tenant", ecComponents.CheckEcExistsOnTheTenant(secretConfig, edgeConnectTenantConfig))
 

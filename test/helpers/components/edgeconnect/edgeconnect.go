@@ -176,9 +176,39 @@ func CheckEcExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnect
 		ecClt, err := BuildEcClient(ctx, clientSecret)
 		require.NoError(t, err)
 
-		_, err = ecClt.GetEdgeConnect(edgeConnectTenantConfig.ID)
-		require.NoError(t, err)
+		const maxRetries = 5
+		var lastErr error
+
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			_, err = ecClt.GetEdgeConnect(edgeConnectTenantConfig.ID)
+			if err == nil {
+				return ctx
+			}
+
+			lastErr = err
+			t.Logf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+			t.Logf("!!! EDGECONNECT CHECK FAILED - ATTEMPT %d/%d !!!", attempt, maxRetries)
+			t.Logf("!!! EdgeConnect ID: %s", edgeConnectTenantConfig.ID)
+			t.Logf("!!! Error: %v", err)
+			t.Logf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+
+			if attempt < maxRetries {
+				time.Sleep(5 * time.Second)
+			}
+		}
+
+		require.NoError(t, lastErr, "Failed to get EdgeConnect after %d attempts", maxRetries)
 
 		return ctx
 	}
+}
+
+func ImmediateCheckEcExistsOnTheTenant(clientSecret tenant.EdgeConnectSecret, edgeConnectTenantConfig *TenantConfig) error {
+	ecClt, err := BuildEcClient(context.TODO(), clientSecret)
+	if err != nil {
+		return err
+	}
+
+	_, err = ecClt.GetEdgeConnect(edgeConnectTenantConfig.ID)
+	return err
 }
