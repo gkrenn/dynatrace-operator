@@ -107,7 +107,7 @@ func WithCustomCA(caData []byte) func(*client) {
 	}
 }
 
-// WithContext can set context for client
+// WithContext can set condtext for client
 // NB: via context you can override default http client to add Proxy or CA certificates
 func WithContext(ctx context.Context) func(*client) {
 	return func(c *client) {
