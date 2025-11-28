@@ -121,8 +121,15 @@ func WithKeepAlive(keepAlive bool) func(*client) {
 			if t, ok := c.httpClient.Transport.(*oauth2.Transport); ok {
 				if bt, ok := t.Base.(*http.Transport); ok {
 					bt.DisableKeepAlives = !keepAlive
+					fmt.Println("yeah, we did something")
+				} else {
+					fmt.Println("base transport is not http.Transport")
 				}
+			} else {
+				fmt.Println("oauth2 transport is not oauth2.Transport")
 			}
+		} else {
+			fmt.Println("http client is nil")
 		}
 	}
 }
