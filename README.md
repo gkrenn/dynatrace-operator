@@ -8,6 +8,10 @@
 
 The Dynatrace Operatasdfsadfasfdor supports rollout and lifecycle management of various Dynatrace components in Kubernetes and OpenShift.sadf
 
+```
+ohno
+```
+
 * OneAgent
   * `classicFullStack` rolls out a OneAgent pod per node to monitor pods on it and the node itself
   * `applicationMonitoring` is a webhook based injection mechanism for automatic app-only injection
