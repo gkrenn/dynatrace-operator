@@ -6,7 +6,11 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/Dynatrace/dynatrace-operator)](https://goreportcard.com/report/github.com/Dynatrace/dynatrace-operator?dummy=unused)
 [![Releases](https://img.shields.io/github/downloads/Dynatrace/dynatrace-operator/total.svg)](https://github.com/Dynatrace/dynatrace-operator/releases)
 
-The Dynatrace Operator supports rollout and lifecycle management of various Dynatrace components in Kubernetes and OpenShift.
+The Dynatrace Operatasdfsadfasfdor supports rollout and lifecycle management of various Dynatrace components in Kubernetes and OpenShift.sadf
+
+```
+ohno
+```
 
 * OneAgent
   * `classicFullStack` rolls out a OneAgent pod per node to monitor pods on it and the node itself
