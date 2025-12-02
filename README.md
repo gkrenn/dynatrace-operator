@@ -12,7 +12,7 @@ The Dynatrace Operator supports rollout and lifecycle management of various Dyna
 echo hello
 ```
 
-* OneAgent
+* OneAgent - some other change
   * `classicFullStack` rolls out a OneAgent pod per node to monitor pods on it and the node itself
   * `applicationMonitoring` is a webhook based injection mechanism for automatic app-only injection
     * CSI Driver can be enabled to cache OneAgent downloads per node
