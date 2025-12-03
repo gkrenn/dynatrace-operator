@@ -147,6 +147,7 @@ func BuildEcClient(ctx context.Context, secret tenant.EdgeConnectSecret) (edgeco
 			"settings:objects:write",
 		}),
 		edgeconnectClient.WithContext(ctx),
+		edgeconnectClient.WithKeepAlive(false),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
