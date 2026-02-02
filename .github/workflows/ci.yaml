@@ -8,8 +8,6 @@ on:
   pull_request:
     branches:
       - "*"
-  merge_group:
-    types: [checks_requested]
 
 permissions:
   contents: read
@@ -17,7 +15,7 @@ permissions:
 env:
   BRANCH: ${{ github.head_ref || github.ref_name }}
   IMAGE_REGISTRY: ghcr.io
-  IMAGE_NAME: dynatrace/dynatrace-operator
+  IMAGE_NAME: gkrenn/dynatrace-operator
   PLATFORMS: linux/amd64
   PR_PLATFORMS: linux/amd64
 
