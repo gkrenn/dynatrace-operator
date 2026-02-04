@@ -16,8 +16,8 @@ env:
   BRANCH: ${{ github.head_ref || github.ref_name }}
   IMAGE_REGISTRY: ghcr.io
   IMAGE_NAME: gkrenn/dynatrace-operator
-  PLATFORMS: linux/amd64
-  PR_PLATFORMS: linux/amd64
+  PLATFORMS: linux/amd64,linux/arm64
+  PR_PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
   build-push:
