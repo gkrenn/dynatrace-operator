@@ -22,7 +22,7 @@ jobs:
           org: "gkrenn"
           package: "dynatrace-operator"
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          dry-run: true
+          dry-run: false
           package-repo-type: "users"
           keep-days: "14"
           tags-to-keep: "^snapshot$,^snapshot-release-.*"
