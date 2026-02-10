@@ -132,5 +132,6 @@ jobs:
         uses: ./.github/actions/upload-nightly-helm
         with:
           version: ${{ needs.prepare.outputs.version }}
+          registry-namespace: gkrenn
           cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           cosign-password: ${{ secrets.COSIGN_PASSWORD }}
