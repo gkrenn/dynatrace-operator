@@ -1,37 +1,9 @@
 name: Cleanup GHCR Packages
 
 on:
+  schedule:
+    - cron: '0 23 * * *'
   workflow_dispatch:
-    inputs:
-      org:
-        description: 'GitHub organization or user name'
-        required: true
-        default: 'gkrenn'
-      package:
-        description: 'Package name'
-        required: true
-        default: 'dynatrace-operator'
-      dry-run:
-        description: 'Run in dry-run mode (no actual deletion)'
-        required: false
-        type: boolean
-        default: true
-      package-repo-type:
-        description: 'Package repository type'
-        required: false
-        type: choice
-        options:
-          - orgs
-          - users
-        default: 'users'
-      keep-days:
-        description: 'Number of days to keep outdated tags'
-        required: false
-        default: '14'
-      tags-to-keep:
-        description: 'Comma-separated regex patterns for tags to always keep'
-        required: false
-        default: '^snapshot$,^snapshot-release-.*'
 
 jobs:
   cleanup:
@@ -47,11 +19,10 @@ jobs:
       - name: Run GHCR cleanup
         uses: ./.github/actions/cleanup-ghcr
         with:
-          org: ${{ inputs.org }}
-          package: ${{ inputs.package }}
+          org: "gkrenn"
+          package: "dynatrace-operator"
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          ghcr-token: ${{ secrets.GITHUB_TOKEN }}
-          dry-run: ${{ inputs.dry-run }}
-          package-repo-type: ${{ inputs.package-repo-type }}
-          keep-days: ${{ inputs.keep-days }}
-          tags-to-keep: ${{ inputs.tags-to-keep }}
+          dry-run: true
+          package-repo-type: "users"
+          keep-days: "14"
+          tags-to-keep: "^snapshot$,^snapshot-release-.*"
